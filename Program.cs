@@ -15,6 +15,13 @@ using System.Timers;
 
 namespace Citadel
 {
+    public enum Permission
+    {
+        User  = 0,
+        Mod = 1,
+        Admin = 2
+    }
+
     public class Program
     {
         public static readonly uint DEFAULT_RESET_DAY = 6;
@@ -35,7 +42,7 @@ namespace Citadel
 
         public static ulong Admin = 0L;
 
-        public static Dictionary<ulong, int> Permissions;
+        public static Dictionary<ulong, Permission> Permissions;
 
         public static DiscordSocketClient Bot;
 
@@ -54,6 +61,11 @@ namespace Citadel
         public static void Main()
         {
             MainAsync().GetAwaiter().GetResult();
+        }
+
+        public static bool CheckPermission(ulong id, Permission value)
+        {
+            return Permissions.ContainsKey(id) && Permissions[id] == value;
         }
 
         public static async Task MainAsync()
@@ -108,7 +120,7 @@ namespace Citadel
             return Task.CompletedTask;
         }
 
-        private static void ReadConfig()
+        public static void ReadConfig()
         {
             if (!File.Exists(CONFIG_PATH))
                 WriteConfig();
@@ -120,7 +132,7 @@ namespace Citadel
                 var permissions = json["permissions"];
                 foreach(var permission in permissions)
                 {
-                    Permissions[permission["id"].ToObject<ulong>()] = permission["value"].ToObject<int>();
+                    Permissions[permission["id"].ToObject<ulong>()] = (Permission)permission["value"].ToObject<int>();
                 }
                 CurrentResetDay = json["reset_day"].ToObject<uint>();
                 CurrentResetHour = json["reset_hour"].ToObject<uint>();
@@ -132,7 +144,7 @@ namespace Citadel
             }
         }
 
-        private static void WriteConfig()
+        public static void WriteConfig()
         {
 
             JArray permissions = new JArray();
@@ -141,7 +153,7 @@ namespace Citadel
                 JObject permission = new JObject
                 {
                     ["id"] = Permission.Key,
-                    ["value"] = Permission.Value
+                    ["value"] = (int)Permission.Value
                 };
                 permissions.Add(permission);
             }
@@ -229,7 +241,7 @@ namespace Citadel
         static Program()
         {
             _cappers = new List<string>();
-            Permissions = new Dictionary<ulong, int>();
+            Permissions = new Dictionary<ulong, Permission>();
             CONFIG_PATH = Directory.GetCurrentDirectory() + "/config.json";
             Timer = new Timer(1000);
             Timer.Elapsed += TimerElapsed;

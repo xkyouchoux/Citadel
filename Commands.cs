@@ -1,4 +1,5 @@
-﻿using Discord.Commands;
+﻿using Discord;
+using Discord.Commands;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,9 +11,19 @@ namespace Citadel
     {
         [RequireOwner]
         [Command("admin")]
-        public Task AdminAsync()
+        public async Task AdminAsync(IGuildUser target)
         {
-            return ReplyAsync("Admin");
+            if(Program.CheckPermission(target.Id, Permission.Admin))
+            {
+                Program.Permissions[target.Id] = Permission.User;
+                await ReplyAsync($"Set {target.Username} as User.");
+            }
+            else
+            {
+                Program.Permissions[target.Id] = Permission.Admin;
+                await ReplyAsync($"Set {target.Username} role as Admin.");
+            }
+            Program.WriteConfig();
         }
     }
 }
