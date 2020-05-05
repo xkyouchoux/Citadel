@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Citadel
@@ -57,10 +58,26 @@ namespace Citadel
         }
 
         [Command("help")]
-        [RequireAdmin]
         public async Task HelpAsync()
         {
-            await ReplyAsync("This will be the help command.");
+        }
+
+        [Command("list")]
+        [RequireMod]
+        public async Task ListAsync()
+        {
+            string[] cappers = Program.CappedList.ToArray();
+
+            var message = new StringBuilder();
+
+            message.Append($"**__Capped citizens for the week of {Program.PreviousResetDate.ToShortDateString()} to {Program.CurrentResetDate.ToShortDateString()}__**");
+
+            foreach (var capper in cappers)
+            {
+                message.Append(string.Format(Program.CappedMessage, capper));
+            }
+
+            await ReplyAsync(message.ToString());
         }
 
         [Command("resetdate")]

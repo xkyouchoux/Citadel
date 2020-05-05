@@ -46,6 +46,7 @@ namespace Citadel
         public static Dictionary<ulong, Permission> Permissions;
 
         public static DiscordSocketClient Bot;
+        public static CommandService Commands;
 
         public static Timer Timer;
 
@@ -67,7 +68,7 @@ namespace Citadel
         public static bool CheckPermission(ulong id, Permission value)
         {
             if (!Permissions.ContainsKey(id)) return false;
-            return value >= Permissions[id];
+            return (int)Permissions[id] >= (int)value;
         }
 
         public static async Task MainAsync()
@@ -81,9 +82,9 @@ namespace Citadel
             }
 
             Bot = services.GetRequiredService<DiscordSocketClient>();
-            var commands = services.GetRequiredService<CommandService>();
+            Commands = services.GetRequiredService<CommandService>();
             Bot.Log += LogAsync;
-            commands.Log += LogAsync;
+            Commands.Log += LogAsync;
 
 
             await Bot.LoginAsync(TokenType.Bot, token);
@@ -103,10 +104,10 @@ namespace Citadel
 
                 var context = new SocketCommandContext(Bot, message);
 
-                await commands.ExecuteAsync(context, argPos, services);
+                await Commands.ExecuteAsync(context, argPos, services);
             };
 
-            await commands.AddModuleAsync<Commands>(services);
+            await Commands.AddModuleAsync<Commands>(services);
 
             //Timer.Start();
 
