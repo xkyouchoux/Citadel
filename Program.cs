@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
@@ -107,6 +108,8 @@ namespace Citadel
 
             await commands.AddModuleAsync<Commands>(services);
 
+            //Timer.Start();
+
             await Task.Delay(-1);
         }
 
@@ -201,6 +204,8 @@ namespace Citadel
                     PostMessageAsync(UpdateChannel, message.ToString()).GetAwaiter().GetResult();
                 }
 
+                File.WriteAllText(CookiesPath, new JArray(CappedList.ToArray()).ToString());
+
                 Bot.SetStatusAsync(UserStatus.Online);
             }
         }
@@ -238,6 +243,14 @@ namespace Citadel
             CurrentResetDate = CurrentResetDate.AddDays(7);
         }
 
+        public static string CookiesPath
+        {
+            get
+            {
+                return $"{Directory.GetCurrentDirectory()}/Log/{PreviousResetDate.ToFileTimeUtc()}.json";
+            }
+        }
+
         static Program()
         {
             CappedList = new List<string>();
@@ -248,8 +261,6 @@ namespace Citadel
             Timer.Elapsed += TimerElapsed;
             var now = DateTime.UtcNow;
             var date = now;
-            Console.WriteLine(now.DayOfWeek);
-            Console.WriteLine((DayOfWeek)CurrentResetDay);
             while (date.DayOfWeek != (DayOfWeek)CurrentResetDay)
             {
                 date = date.AddDays(1);
@@ -264,6 +275,13 @@ namespace Citadel
             {
                 PreviousResetDate = date.AddDays(-7);
                 CurrentResetDate = date;
+            }
+            var path = CookiesPath;
+            if (File.Exists(path))
+            {
+                var array = JArray.Parse(File.ReadAllText(path));
+                foreach (var item in array)
+                    CappedList.Add(item.ToString());
             }
         }
     }
