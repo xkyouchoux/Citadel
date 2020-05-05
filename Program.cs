@@ -24,6 +24,8 @@ namespace Citadel
 
     public class Program
     {
+        public static readonly char PREFIX = '>';
+
         public static readonly uint DEFAULT_RESET_DAY = 6;
         public static readonly uint DEFAULT_RESET_HOUR = 0;
         public static readonly uint DEFAULT_RESET_MINUTE = 0;
@@ -33,9 +35,9 @@ namespace Citadel
 
         public static readonly string CONFIG_PATH;
 
-        public static uint CurrentResetDay;
-        public static uint CurrentResetHour;
-        public static uint CurrentResetMinute;
+        public static uint CurrentResetDay = DEFAULT_RESET_DAY;
+        public static uint CurrentResetHour = DEFAULT_RESET_HOUR;
+        public static uint CurrentResetMinute = DEFAULT_RESET_MINUTE;
 
         public static DateTime PreviousResetDate;
         public static DateTime CurrentResetDate;
@@ -53,7 +55,7 @@ namespace Citadel
 
         public static volatile bool Paused = false;
 
-        private static List<string> _cappers;
+        private static readonly List<string> _cappers;
 
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
         public static string CappedMessage = DEFAULT_CAPPED_MESSAGE;
@@ -65,53 +67,49 @@ namespace Citadel
 
         public static bool CheckPermission(ulong id, Permission value)
         {
-            return Permissions.ContainsKey(id) && Permissions[id] == value;
+            if (!Permissions.ContainsKey(id)) return false;
+            return value >= Permissions[id];
         }
 
         public static async Task MainAsync()
         {
-            using (var services = GetServices())
+            using var services = GetServices();
+            string token = Environment.GetEnvironmentVariable("citadel-bot-token");
+            if (token == null || token.Length == 0)
+            {
+                Console.WriteLine("Invalid bot token, please set the token environtment variable 'citadel-bot-token' to a valid token.");
+                return;
+            }
+
+            Bot = services.GetRequiredService<DiscordSocketClient>();
+            var commands = services.GetRequiredService<CommandService>();
+            Bot.Log += LogAsync;
+            commands.Log += LogAsync;
+
+
+            await Bot.LoginAsync(TokenType.Bot, token);
+            await Bot.StartAsync();
+
+            await Bot.SetGameAsync($"{PREFIX}help");
+
+            Bot.MessageReceived += async (rawMessage) =>
             {
 
-                string token = Environment.GetEnvironmentVariable("citadel-bot-token");
-                if (token == null || token.Length == 0)
-                {
-                    Console.WriteLine("Invalid bot token, please set the token environtment variable 'citadel-bot-token' to a valid token.");
-                    return;
-                }
+                if (!(rawMessage is SocketUserMessage message)) return;
+                if (message.Source != MessageSource.User) return;
 
-                ReadConfig();
+                var argPos = 0;
 
-                Bot = services.GetRequiredService<DiscordSocketClient>();
-                var commands = services.GetRequiredService<CommandService>();
-                Bot.Log += LogAsync;
-                commands.Log += LogAsync;
+                if (!message.HasCharPrefix(PREFIX, ref argPos)) return;
 
+                var context = new SocketCommandContext(Bot, message);
 
-                await Bot.LoginAsync(TokenType.Bot, token);
-                await Bot.StartAsync();
+                await commands.ExecuteAsync(context, argPos, services);
+            };
 
-                await Bot.SetGameAsync("?help");
+            await commands.AddModuleAsync<Commands>(services);
 
-                Bot.MessageReceived += async (rawMessage) =>
-                {
-
-                    if (!(rawMessage is SocketUserMessage message)) return;
-                    if (message.Source != MessageSource.User) return;
-
-                    var argPos = 0;
-
-                    if (!message.HasCharPrefix('?', ref argPos)) return;
-
-                    var context = new SocketCommandContext(Bot, message);
-
-                    await commands.ExecuteAsync(context, argPos, services);
-                };
-
-                await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
-
-                await Task.Delay(-1);
-            }
+            await Task.Delay(-1);
         }
 
         private static Task LogAsync(LogMessage message)
@@ -238,14 +236,39 @@ namespace Citadel
                 .BuildServiceProvider();
         }
 
+        public static void ProgressDate()
+        {
+            PreviousResetDate = CurrentResetDate;
+            CurrentResetDate = CurrentResetDate.AddDays(7);
+        }
+
         static Program()
         {
             _cappers = new List<string>();
             Permissions = new Dictionary<ulong, Permission>();
             CONFIG_PATH = Directory.GetCurrentDirectory() + "/config.json";
+            ReadConfig();
             Timer = new Timer(1000);
             Timer.Elapsed += TimerElapsed;
-            PreviousResetDate = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse("02-May-2020 00:00"), TimeZoneInfo.Utc);
+            var now = DateTime.UtcNow;
+            var date = now;
+            Console.WriteLine(now.DayOfWeek);
+            Console.WriteLine((DayOfWeek)CurrentResetDay);
+            while (date.DayOfWeek != (DayOfWeek)CurrentResetDay)
+            {
+                date = date.AddDays(1);
+            }
+            date = new DateTime(date.Year, date.Month, date.Day, (int)CurrentResetHour, (int)CurrentResetMinute, 0);
+            if(now > date)
+            {
+                PreviousResetDate = date;
+                CurrentResetDate = date.AddDays(7);
+            }
+            else
+            {
+                PreviousResetDate = date.AddDays(-7);
+                CurrentResetDate = date;
+            }
         }
     }
 }

@@ -1,29 +1,70 @@
 ﻿using Discord;
 using Discord.Commands;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Citadel
 {
     public class Commands : ModuleBase<SocketCommandContext>
     {
-        [RequireOwner]
-        [Command("admin")]
-        public async Task AdminAsync(IGuildUser target)
+        [Command("permission")]
+        [RequireAdmin]
+        public async Task AdminAsync(IGuildUser target, [Remainder]string text)
         {
-            if(Program.CheckPermission(target.Id, Permission.Admin))
+            var id = Context.User.Id;
+            if(id == target.Id)
             {
-                Program.Permissions[target.Id] = Permission.User;
-                await ReplyAsync($"Set {target.Username} as User.");
+                await ReplyAsync("You cannot change your own permission level.");
             }
             else
             {
-                Program.Permissions[target.Id] = Permission.Admin;
-                await ReplyAsync($"Set {target.Username} role as Admin.");
+                var contextRank = Context.Guild.OwnerId == id ? 3 : (int)Program.Permissions[id];
+                var targetRank = Context.Guild.OwnerId == target.Id ? 3 : Program.CheckPermission(target.Id, Permission.Mod) ? (int)Program.Permissions[target.Id] : 0;
+                if (contextRank > targetRank)
+                {
+                    var success = Enum.TryParse(text, true, out Permission permission);
+                    if (!success)
+                    {
+                        string options = contextRank == 3 ? "user, mod, or admin" : "user or mod";
+                        await ReplyAsync($"Unknown permission level '{text}', options are {options}");
+                    }
+                    else
+                    {
+                        if(targetRank == (int)permission)
+                        {
+                            await ReplyAsync($"User {target.Username} already has a permission level of '{permission}'");
+                        }
+                        else
+                        {
+                            if (permission == Permission.User)
+                            {
+                                Program.Permissions.Remove(target.Id);
+                            }
+                            else
+                            {
+                                Program.Permissions[target.Id] = permission;
+                            }
+                            Program.WriteConfig();
+                            await ReplyAsync($"Set {target.Username} permission level to {permission}");
+                        }
+                    }
+                }
+                else
+                {
+                    await ReplyAsync($"{target.Username} has a equal or higher permission level than you.");
+                }
             }
-            Program.WriteConfig();
         }
+
+        [Command("help")]
+        [RequireAdmin]
+        public async Task HelpAsync()
+        {
+            await ReplyAsync("This will be the help command.");
+        }
+
+        [Command("resetdate")]
+        public async Task TimeToResetAsync()
+            => await ReplyAsync(Program.CurrentResetDate.ToString());
     }
 }

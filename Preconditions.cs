@@ -9,13 +9,29 @@ namespace Citadel
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            if (context.User is SocketGuildUser user)
+            if (context.User is SocketGuildUser)
             {
-                if (context.Guild.OwnerId == context.User.Id || (Program.Permissions.ContainsKey(context.User.Id) && Program.Permissions[context.User.Id] == Permission.Admin))
+                if (context.Guild.OwnerId == context.User.Id || Program.CheckPermission(context.User.Id, Permission.Admin))
                 {
                     return Task.FromResult(PreconditionResult.FromSuccess());
                 }
-                else return Task.FromResult(PreconditionResult.FromError("Must be admin or owner."));
+                else return Task.FromResult(PreconditionResult.FromError("Must be Admin+."));
+            }
+            else return Task.FromResult(PreconditionResult.FromError("Must be used in a guild."));
+        }
+    }
+
+    public class RequireModAttribute : PreconditionAttribute
+    {
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        {
+            if (context.User is SocketGuildUser)
+            {
+                if (context.Guild.OwnerId == context.User.Id || Program.CheckPermission(context.User.Id, Permission.Mod))
+                {
+                    return Task.FromResult(PreconditionResult.FromSuccess());
+                }
+                else return Task.FromResult(PreconditionResult.FromError("Must be Mod+."));
             }
             else return Task.FromResult(PreconditionResult.FromError("Must be used in a guild."));
         }
