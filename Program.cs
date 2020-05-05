@@ -42,8 +42,6 @@ namespace Citadel
         public static DateTime PreviousResetDate;
         public static DateTime CurrentResetDate;
 
-        public static ulong Admin = 0L;
-
         public static Dictionary<ulong, Permission> Permissions;
 
         public static DiscordSocketClient Bot;
@@ -125,7 +123,6 @@ namespace Citadel
             else
             {
                 var json = JObject.Parse(File.ReadAllText(CONFIG_PATH));
-                Admin = json["admin"].ToObject<ulong>();
                 Permissions.Clear();
                 var permissions = json["permissions"];
                 foreach(var permission in permissions)
@@ -157,7 +154,6 @@ namespace Citadel
             }
             JObject json = new JObject
             {
-                ["admin"] = Admin,
                 ["permissions"] = permissions,
                 ["reset_day"] = CurrentResetDay,
                 ["reset_hour"] = CurrentResetHour,

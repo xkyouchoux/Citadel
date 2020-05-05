@@ -17,6 +17,7 @@ namespace Citadel
         public static readonly int NOT_A_MEMBER_CODE = -3;
         public static readonly int PROFILE_PRIVATE_CODE = -4;
 
+        public static readonly string CLAN_NAME = "Kingdom of Ashdale";
         public static readonly string ACTIVITY_LINK = "https://apps.runescape.com/runemetrics/profile/profile?user={0}&activities=20";
 
         private static WebClient _client;
@@ -42,7 +43,7 @@ namespace Citadel
             List<string> result = new List<string>();
             try
             {
-                using (var reader = new StringReader(_client.DownloadString("http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName=Kingdom%20of%20Ashdale")))
+                using (var reader = new StringReader(_client.DownloadString($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={CLAN_NAME}")))
                 {
                     for (string line = reader.ReadLine(); (line = reader.ReadLine()) != null;)
                     {
