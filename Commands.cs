@@ -12,7 +12,7 @@ namespace Citadel
         public async Task AdminAsync(IGuildUser target, [Remainder]string text)
         {
             var id = Context.User.Id;
-            if(id == target.Id)
+            if (id == target.Id)
             {
                 await ReplyAsync("You cannot change your own permission level.");
             }
@@ -30,7 +30,7 @@ namespace Citadel
                     }
                     else
                     {
-                        if(targetRank == (int)permission)
+                        if (targetRank == (int)permission)
                         {
                             await ReplyAsync($"User {target.Username} already has a permission level of '{permission}'");
                         }
@@ -66,5 +66,9 @@ namespace Citadel
         [Command("resetdate")]
         public async Task TimeToResetAsync()
             => await ReplyAsync(Program.CurrentResetDate.ToString());
+
+        [Command("haveicapped")]
+        public async Task HaveICappedAsync([Remainder]string text)
+            => await ReplyAsync(Program.CappedList.Contains(text) ? $"{text} has capped this week!" : $"{text} has not capped this week!");
     }
 }

@@ -55,7 +55,7 @@ namespace Citadel
 
         public static volatile bool Paused = false;
 
-        private static readonly List<string> _cappers;
+        public static readonly List<string> CappedList;
 
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
         public static string CappedMessage = DEFAULT_CAPPED_MESSAGE;
@@ -181,7 +181,7 @@ namespace Citadel
                 }
                 PreviousResetDate = CurrentResetDate;
                 CurrentResetDate = CurrentResetDate.AddDays(7);
-                _cappers.Clear();
+                CappedList.Clear();
             }
             else if(!Paused && time.Hour % 10 == 0)
             {
@@ -193,9 +193,9 @@ namespace Citadel
 
                 foreach(var capper in cappers)
                 {
-                    if (!_cappers.Contains(capper))
+                    if (!CappedList.Contains(capper))
                     {
-                        _cappers.Add(capper);
+                        CappedList.Add(capper);
                         message.Append(string.Format(CappedMessage, capper));
                     }
                 }
@@ -244,7 +244,7 @@ namespace Citadel
 
         static Program()
         {
-            _cappers = new List<string>();
+            CappedList = new List<string>();
             Permissions = new Dictionary<ulong, Permission>();
             CONFIG_PATH = Directory.GetCurrentDirectory() + "/config.json";
             ReadConfig();
