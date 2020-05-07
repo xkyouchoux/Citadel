@@ -44,6 +44,7 @@ namespace Citadel
         public static DateTime CurrentResetDate;
 
         public static Dictionary<ulong, Permission> Permissions;
+        public static Dictionary<ulong, string> RSNames;
 
         public static DiscordSocketClient Bot;
         public static CommandService Commands;
@@ -59,6 +60,8 @@ namespace Citadel
 
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
         public static string CappedMessage = DEFAULT_CAPPED_MESSAGE;
+
+        public static volatile bool Dirty = false;
 
         public static void Main()
         {
@@ -120,7 +123,7 @@ namespace Citadel
             return Task.CompletedTask;
         }
 
-        public static void ReadConfig()
+        private static void ReadConfig()
         {
             if (!File.Exists(CONFIG_PATH))
                 WriteConfig();
@@ -133,6 +136,12 @@ namespace Citadel
                 {
                     Permissions[permission["id"].ToObject<ulong>()] = (Permission)permission["value"].ToObject<int>();
                 }
+                RSNames.Clear();
+                var rsnames = json["rsn"];
+                foreach(var rsname in rsnames)
+                {
+                    RSNames[rsname["id"].ToObject<ulong>()] = rsname["value"].ToString();
+                }
                 CurrentResetDay = json["reset_day"].ToObject<uint>();
                 CurrentResetHour = json["reset_hour"].ToObject<uint>();
                 CurrentResetMinute = json["reset_minute"].ToObject<uint>();
@@ -143,7 +152,7 @@ namespace Citadel
             }
         }
 
-        public static void WriteConfig()
+        private static void WriteConfig()
         {
 
             JArray permissions = new JArray();
@@ -156,9 +165,20 @@ namespace Citadel
                 };
                 permissions.Add(permission);
             }
+            JArray rsnames = new JArray();
+            foreach(var RSName in RSNames)
+            {
+                JObject rsname = new JObject
+                {
+                    ["id"] = RSName.Key,
+                    ["value"] = RSName.Value
+                };
+                rsnames.Add(rsname);
+            }
             JObject json = new JObject
             {
                 ["permissions"] = permissions,
+                ["rsn"] = rsnames,
                 ["reset_day"] = CurrentResetDay,
                 ["reset_hour"] = CurrentResetHour,
                 ["reset_minute"] = CurrentResetMinute,
@@ -172,6 +192,11 @@ namespace Citadel
 
         private static void TimerElapsed(object sender, ElapsedEventArgs e)
         {
+            if (Dirty)
+            {
+                Dirty = false;
+                WriteConfig();
+            }
             var time = e.SignalTime;
             if(time >= CurrentResetDate)
             {
@@ -248,7 +273,7 @@ namespace Citadel
         {
             get
             {
-                return $"{Directory.GetCurrentDirectory()}/Log/{PreviousResetDate.ToFileTimeUtc()}.json";
+                return $"{Directory.GetCurrentDirectory()}/Log/{PreviousResetDate.ToShortDateString().Replace("/", "-")}_{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json";
             }
         }
 
@@ -256,6 +281,7 @@ namespace Citadel
         {
             CappedList = new List<string>();
             Permissions = new Dictionary<ulong, Permission>();
+            RSNames = new Dictionary<ulong, string>();
             CONFIG_PATH = Directory.GetCurrentDirectory() + "/config.json";
             ReadConfig();
             Timer = new Timer(1000);
@@ -278,6 +304,7 @@ namespace Citadel
                 CurrentResetDate = date;
             }
             var path = CookiesPath;
+            Console.WriteLine(CookiesPath);
             if (File.Exists(path))
             {
                 var array = JArray.Parse(File.ReadAllText(path));

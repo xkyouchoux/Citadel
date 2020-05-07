@@ -45,7 +45,7 @@ namespace Citadel
                             {
                                 Program.Permissions[target.Id] = permission;
                             }
-                            Program.WriteConfig();
+                            Program.Dirty = true;
                             await ReplyAsync($"Set {target.Username} permission level to {permission}");
                         }
                     }
@@ -70,11 +70,11 @@ namespace Citadel
 
             var message = new StringBuilder();
 
-            message.Append($"**__Capped citizens for the week of {Program.PreviousResetDate.ToShortDateString()} to {Program.CurrentResetDate.ToShortDateString()}__**");
+            message.Append($"**__Capped citizens for the week of {Program.PreviousResetDate.ToShortDateString()} to {Program.CurrentResetDate.ToShortDateString()}__**\n");
 
             foreach (var capper in cappers)
             {
-                message.Append(string.Format(Program.CappedMessage, capper));
+                message.Append($"{capper}\n");
             }
 
             await ReplyAsync(message.ToString());
@@ -84,8 +84,20 @@ namespace Citadel
         public async Task TimeToResetAsync()
             => await ReplyAsync(Program.CurrentResetDate.ToString());
 
+        [Command("setrsn")]
+        public async Task SetRSNAsync([Remainder]string text)
+        {
+            Program.RSNames[Context.User.Id] = text;
+            Program.Dirty = true;
+            await ReplyAsync($"Set username to {text}");
+        }
+
         [Command("haveicapped")]
         public async Task HaveICappedAsync([Remainder]string text)
             => await ReplyAsync(Program.CappedList.Contains(text) ? $"{text} has capped this week!" : $"{text} has not capped this week!");
+
+        [Command("haveicapped")]
+        public async Task HaveICappedAsync()
+            => await ReplyAsync(Program.RSNames.ContainsKey(Context.User.Id) ? Program.CappedList.Contains(Program.RSNames[Context.User.Id]) ? $"{Program.RSNames[Context.User.Id]} has capped this week!" : $"{Program.RSNames[Context.User.Id]} has not capped this week!" : $"Username not set, please set with {Program.PREFIX}setrsn");
     }
 }
