@@ -221,6 +221,7 @@ namespace Citadel
                 WriteCookies();
 
                 Bot.SetStatusAsync(UserStatus.Online);
+                Updating = false;
                 Console.WriteLine($"Finished Update at {DateTime.UtcNow}");
             }
         }
