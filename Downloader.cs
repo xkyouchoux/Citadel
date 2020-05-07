@@ -32,7 +32,7 @@ namespace Citadel
                 var code = CheckFeed(member);
                 if(code == CAPPED_CODE)
                 {
-                    Console.WriteLine(member + " has capped.");
+                    result.Add(member);
                 }
             }
             return result.ToArray();

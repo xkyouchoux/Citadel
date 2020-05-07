@@ -63,6 +63,8 @@ namespace Citadel
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
         public static string CappedMessage = DEFAULT_CAPPED_MESSAGE;
 
+        private static bool Updating = false;
+
         public static void Main()
         {
             MainAsync().GetAwaiter().GetResult();
@@ -188,12 +190,14 @@ namespace Citadel
                 {
                     PostMessageAsync(ResetChannel, ResetMessage).GetAwaiter().GetResult();
                 }
+                WriteCookies();
                 PreviousResetDate = CurrentResetDate;
                 CurrentResetDate = CurrentResetDate.AddDays(7);
                 CappedList.Clear();
             }
-            else if(!Paused && time.Hour % 10 == 0)
+            else if(!Paused && time.Hour % 10 == 0 && !Updating)
             {
+                Updating = true;
                 Console.WriteLine($"Started Update at {DateTime.UtcNow}");
                 Bot.SetStatusAsync(UserStatus.Idle);
 
@@ -227,7 +231,6 @@ namespace Citadel
                 await Task.Delay(1);
             foreach(var guild in Bot.Guilds)
             {
-                Console.WriteLine(guild);
                 foreach(var textChannel in guild.TextChannels)
                 {
                     Console.WriteLine(textChannel);
