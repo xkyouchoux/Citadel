@@ -35,6 +35,7 @@ namespace Citadel
         public static readonly string DEFAULT_CAPPED_MESSAGE = "**{0}** has capped!\n";
 
         public static readonly string CONFIG_PATH;
+        public static readonly string RSN_PATH;
 
         public static uint CurrentResetDay = DEFAULT_RESET_DAY;
         public static uint CurrentResetHour = DEFAULT_RESET_HOUR;
@@ -48,6 +49,7 @@ namespace Citadel
 
         public static DiscordSocketClient Bot;
         public static CommandService Commands;
+        public static ServiceProvider Services;
 
         public static Timer Timer;
 
@@ -56,16 +58,15 @@ namespace Citadel
 
         public static volatile bool Paused = false;
 
-        public static readonly List<string> CappedList;
+        public static volatile List<string> CappedList;
 
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
         public static string CappedMessage = DEFAULT_CAPPED_MESSAGE;
 
-        public static volatile bool Dirty = false;
-
         public static void Main()
         {
             MainAsync().GetAwaiter().GetResult();
+            Services.Dispose();
         }
 
         public static bool CheckPermission(ulong id, Permission value)
@@ -76,7 +77,7 @@ namespace Citadel
 
         public static async Task MainAsync()
         {
-            using var services = GetServices();
+            Services = GetServices();
             string token = Environment.GetEnvironmentVariable("citadel-bot-token");
             if (token == null || token.Length == 0)
             {
@@ -84,8 +85,8 @@ namespace Citadel
                 return;
             }
 
-            Bot = services.GetRequiredService<DiscordSocketClient>();
-            Commands = services.GetRequiredService<CommandService>();
+            Bot = Services.GetRequiredService<DiscordSocketClient>();
+            Commands = Services.GetRequiredService<CommandService>();
             Bot.Log += LogAsync;
             Commands.Log += LogAsync;
 
@@ -107,12 +108,12 @@ namespace Citadel
 
                 var context = new SocketCommandContext(Bot, message);
 
-                await Commands.ExecuteAsync(context, argPos, services);
+                await Commands.ExecuteAsync(context, argPos, Services);
             };
 
-            await Commands.AddModuleAsync<Commands>(services);
+            await Commands.AddModuleAsync<Commands>(Services);
 
-            //Timer.Start();
+            Timer.Start();
 
             await Task.Delay(-1);
         }
@@ -136,12 +137,6 @@ namespace Citadel
                 {
                     Permissions[permission["id"].ToObject<ulong>()] = (Permission)permission["value"].ToObject<int>();
                 }
-                RSNames.Clear();
-                var rsnames = json["rsn"];
-                foreach(var rsname in rsnames)
-                {
-                    RSNames[rsname["id"].ToObject<ulong>()] = rsname["value"].ToString();
-                }
                 CurrentResetDay = json["reset_day"].ToObject<uint>();
                 CurrentResetHour = json["reset_hour"].ToObject<uint>();
                 CurrentResetMinute = json["reset_minute"].ToObject<uint>();
@@ -152,7 +147,7 @@ namespace Citadel
             }
         }
 
-        private static void WriteConfig()
+        public static void WriteConfig()
         {
 
             JArray permissions = new JArray();
@@ -165,20 +160,9 @@ namespace Citadel
                 };
                 permissions.Add(permission);
             }
-            JArray rsnames = new JArray();
-            foreach(var RSName in RSNames)
-            {
-                JObject rsname = new JObject
-                {
-                    ["id"] = RSName.Key,
-                    ["value"] = RSName.Value
-                };
-                rsnames.Add(rsname);
-            }
             JObject json = new JObject
             {
                 ["permissions"] = permissions,
-                ["rsn"] = rsnames,
                 ["reset_day"] = CurrentResetDay,
                 ["reset_hour"] = CurrentResetHour,
                 ["reset_minute"] = CurrentResetMinute,
@@ -190,13 +174,13 @@ namespace Citadel
             File.WriteAllText(CONFIG_PATH, json.ToString());
         }
 
+        public static void WriteCookies()
+        {
+            File.WriteAllText(CookiesPath, new JArray(CappedList.ToArray()).ToString());
+        }
+
         private static void TimerElapsed(object sender, ElapsedEventArgs e)
         {
-            if (Dirty)
-            {
-                Dirty = false;
-                WriteConfig();
-            }
             var time = e.SignalTime;
             if(time >= CurrentResetDate)
             {
@@ -210,6 +194,7 @@ namespace Citadel
             }
             else if(!Paused && time.Hour % 10 == 0)
             {
+                Console.WriteLine($"Started Update at {DateTime.UtcNow}");
                 Bot.SetStatusAsync(UserStatus.Idle);
 
                 string[] cappers = Downloader.GetCappersList();
@@ -229,10 +214,10 @@ namespace Citadel
                 {
                     PostMessageAsync(UpdateChannel, message.ToString()).GetAwaiter().GetResult();
                 }
-
-                File.WriteAllText(CookiesPath, new JArray(CappedList.ToArray()).ToString());
+                WriteCookies();
 
                 Bot.SetStatusAsync(UserStatus.Online);
+                Console.WriteLine($"Finished Update at {DateTime.UtcNow}");
             }
         }
 
@@ -283,6 +268,8 @@ namespace Citadel
             Permissions = new Dictionary<ulong, Permission>();
             RSNames = new Dictionary<ulong, string>();
             CONFIG_PATH = Directory.GetCurrentDirectory() + "/config.json";
+            RSN_PATH = Directory.GetCurrentDirectory() + "/rsn";
+            Directory.CreateDirectory(RSN_PATH);
             ReadConfig();
             Timer = new Timer(1000);
             Timer.Elapsed += TimerElapsed;
@@ -304,12 +291,17 @@ namespace Citadel
                 CurrentResetDate = date;
             }
             var path = CookiesPath;
-            Console.WriteLine(CookiesPath);
             if (File.Exists(path))
             {
                 var array = JArray.Parse(File.ReadAllText(path));
                 foreach (var item in array)
                     CappedList.Add(item.ToString());
+            }
+            var ids = Directory.GetFiles(RSN_PATH);
+            foreach(var id in ids)
+            {
+
+                RSNames.Add(ulong.Parse(new FileInfo(id).Name), File.ReadAllText(id));
             }
         }
     }

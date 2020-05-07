@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -45,7 +46,7 @@ namespace Citadel
                             {
                                 Program.Permissions[target.Id] = permission;
                             }
-                            Program.Dirty = true;
+                            Program.WriteConfig();
                             await ReplyAsync($"Set {target.Username} permission level to {permission}");
                         }
                     }
@@ -60,6 +61,14 @@ namespace Citadel
         [Command("help")]
         public async Task HelpAsync()
         {
+            var commands = Program.Commands.GetExecutableCommandsAsync(Context, Program.Services);
+            var result = new StringBuilder();
+            foreach(var command in commands.Result)
+            {
+                if (command.Name == "help") continue;
+                result.Append($"{command.Name}\n");
+            }
+            await ReplyAsync($"**__Available Commands__**\n{result}");
         }
 
         [Command("list")]
@@ -80,24 +89,75 @@ namespace Citadel
             await ReplyAsync(message.ToString());
         }
 
+        [Command("add")]
+        [RequireMod]
+        public async Task AddAsync(params string[] names)
+        {
+            foreach(var name in names)
+            {
+                Program.CappedList.Add(name);
+            }
+            Program.WriteCookies();
+            await ReplyAsync("Added all to capped list.");
+        }
+
+        [Command("remove")]
+        [RequireMod]
+        public async Task RemoveAsync(params string[] names)
+        {
+            foreach(var name in names)
+            {
+                Program.CappedList.Remove(name);
+            }
+            Program.WriteCookies();
+            await ReplyAsync("Removed all from capped list.");
+        }
+
         [Command("resetdate")]
         public async Task TimeToResetAsync()
-            => await ReplyAsync(Program.CurrentResetDate.ToString());
+            => await ReplyAsync($"Current citadel reset is **{Program.CurrentResetDate}**.");
 
         [Command("setrsn")]
         public async Task SetRSNAsync([Remainder]string text)
         {
             Program.RSNames[Context.User.Id] = text;
-            Program.Dirty = true;
+            await File.WriteAllTextAsync(Program.RSN_PATH + "/" + Context.User.Id, text);
             await ReplyAsync($"Set username to {text}");
         }
 
         [Command("haveicapped")]
-        public async Task HaveICappedAsync([Remainder]string text)
-            => await ReplyAsync(Program.CappedList.Contains(text) ? $"{text} has capped this week!" : $"{text} has not capped this week!");
+        public async Task HaveICappedAsync([Remainder]string text = null)
+        {
+            if(text == null)
+                await ReplyAsync(Program.RSNames.ContainsKey(Context.User.Id) ? Program.CappedList.Contains(Program.RSNames[Context.User.Id]) ? $"{Program.RSNames[Context.User.Id]} has capped this week!" : $"{Program.RSNames[Context.User.Id]} has not capped this week!" : $"Username not set, please set with {Program.PREFIX}setrsn");
+            else
+                await ReplyAsync(Program.CappedList.Contains(text) ? $"{text} has capped this week!" : $"{text} has not capped this week!");
+        }
 
-        [Command("haveicapped")]
-        public async Task HaveICappedAsync()
-            => await ReplyAsync(Program.RSNames.ContainsKey(Context.User.Id) ? Program.CappedList.Contains(Program.RSNames[Context.User.Id]) ? $"{Program.RSNames[Context.User.Id]} has capped this week!" : $"{Program.RSNames[Context.User.Id]} has not capped this week!" : $"Username not set, please set with {Program.PREFIX}setrsn");
+        [Command("setupdatechannel")]
+        [RequireMod]
+        public async Task SetUpdateChannelAsync(IGuildChannel raw)
+        {
+            if (raw is ITextChannel channel)
+            {
+                Program.UpdateChannel = channel.Id;
+                Program.WriteConfig();
+                await ReplyAsync($"Set the Update channel to {channel.Name}.");
+            }
+            else await ReplyAsync($"{raw.Name} must be a Text Channel.");
+        }
+
+        [Command("setresetchannel")]
+        [RequireMod]
+        public async Task SetResetChannelAsync(IGuildChannel raw)
+        {
+            if (raw is ITextChannel channel)
+            {
+                Program.ResetChannel = channel.Id;
+                Program.WriteConfig();
+                await ReplyAsync($"Set the Reset channel to {channel.Name}.");
+            }
+            else await ReplyAsync($"{raw.Name} must be a Text Channel.");
+        }
     }
 }
