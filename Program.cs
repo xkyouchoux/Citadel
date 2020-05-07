@@ -36,6 +36,7 @@ namespace Citadel
 
         public static readonly string CONFIG_PATH;
         public static readonly string RSN_PATH;
+        public static readonly string COOKIE_DIRECTORY;
 
         public static uint CurrentResetDay = DEFAULT_RESET_DAY;
         public static uint CurrentResetHour = DEFAULT_RESET_HOUR;
@@ -261,7 +262,7 @@ namespace Citadel
         {
             get
             {
-                return $"{Directory.GetCurrentDirectory()}/Log/{PreviousResetDate.ToShortDateString().Replace("/", "-")}_{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json";
+                return $"{COOKIE_DIRECTORY}/{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json";
             }
         }
 
@@ -272,6 +273,7 @@ namespace Citadel
             RSNames = new Dictionary<ulong, string>();
             CONFIG_PATH = Directory.GetCurrentDirectory() + "/config.json";
             RSN_PATH = Directory.GetCurrentDirectory() + "/rsn";
+            COOKIE_DIRECTORY = $"{Directory.GetCurrentDirectory()}/Log";
             Directory.CreateDirectory(RSN_PATH);
             ReadConfig();
             Timer = new Timer(1000);

@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
+using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Text;
@@ -68,25 +69,44 @@ namespace Citadel
                 if (command.Name == "help") continue;
                 result.Append($"{command.Name}\n");
             }
-            await ReplyAsync($"**__Available Commands__**\n{result}");
+            await Context.User.SendMessageAsync($"**__Available Commands__**\n{result}");
         }
 
         [Command("list")]
         [RequireMod]
-        public async Task ListAsync()
+        public async Task ListAsync([Remainder]string date = null)
         {
-            string[] cappers = Program.CappedList.ToArray();
-
             var message = new StringBuilder();
-
-            message.Append($"**__Capped citizens for the week of {Program.PreviousResetDate.ToShortDateString()} to {Program.CurrentResetDate.ToShortDateString()}__**\n");
-
-            foreach (var capper in cappers)
+            
+            if(date == null)
             {
-                message.Append($"{capper}\n");
-            }
+                string[] cappers = Program.CappedList.ToArray();
 
-            await ReplyAsync(message.ToString());
+                message.Append($"**__Capped citizens for the week of {Program.CurrentResetDate.ToShortDateString()}__**\n");
+
+                foreach (var capper in cappers)
+                {
+                    message.Append($"{capper}\n");
+                }
+                await ReplyAsync(message.ToString());
+            }
+            else
+            {
+                if(File.Exists(Program.COOKIE_DIRECTORY + $"/{date.Replace("/", "-")}.json"))
+                {
+                    JArray cookies = JArray.Parse(File.ReadAllText(Program.COOKIE_DIRECTORY + $"/{date.Replace("/", "-")}.json"));
+                    message.Append($"**__Capped citizens for the week of {date.Replace("-", "/")}__**\n");
+                    foreach (var cookie in cookies)
+                    {
+                        message.Append($"{cookie}\n");
+                    }
+                    await ReplyAsync(message.ToString());
+                }
+                else
+                {
+                    await ReplyAsync($"There is no data for {date}.");
+                }
+            }
         }
 
         [Command("add")]
