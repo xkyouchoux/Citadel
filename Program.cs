@@ -195,7 +195,7 @@ namespace Citadel
                 CurrentResetDate = CurrentResetDate.AddDays(7);
                 CappedList.Clear();
             }
-            else if(!Paused && time.Hour % 10 == 0 && !Updating)
+            else if(!Paused && time.Minute % 10 == 0 && !Updating)
             {
                 Updating = true;
                 Console.WriteLine($"Started Update at {DateTime.UtcNow}");
@@ -234,7 +234,6 @@ namespace Citadel
             {
                 foreach(var textChannel in guild.TextChannels)
                 {
-                    Console.WriteLine(textChannel);
                     if(textChannel.Id == channel)
                     {
                         await textChannel.SendMessageAsync(message);
