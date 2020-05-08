@@ -33,7 +33,11 @@ namespace Citadel
                     }
                     else
                     {
-                        if (targetRank == (int)permission)
+                        if((int)permission >= contextRank)
+                        {
+                            await ReplyAsync($"Cannot set {target.Username} to a rank equal to or above your own.");
+                        }
+                        else if (targetRank == (int)permission)
                         {
                             await ReplyAsync($"User {target.Username} already has a permission level of '{permission}'");
                         }
