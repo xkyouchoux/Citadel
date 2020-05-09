@@ -160,9 +160,15 @@ namespace Citadel
 
         [Command("setupdatechannel")]
         [RequireMod]
-        public async Task SetUpdateChannelAsync(IGuildChannel raw)
+        public async Task SetUpdateChannelAsync(IGuildChannel raw = null)
         {
-            if (raw is ITextChannel channel)
+            if(raw == null)
+            {
+                Program.UpdateChannel = 0;
+                Program.WriteConfig();
+                await ReplyAsync("Removed the update channel.");
+            }
+            else if (raw is ITextChannel channel)
             {
                 Program.UpdateChannel = channel.Id;
                 Program.WriteConfig();
@@ -173,9 +179,15 @@ namespace Citadel
 
         [Command("setresetchannel")]
         [RequireMod]
-        public async Task SetResetChannelAsync(IGuildChannel raw)
+        public async Task SetResetChannelAsync(IGuildChannel raw = null)
         {
-            if (raw is ITextChannel channel)
+            if(raw == null)
+            {
+                Program.ResetChannel = 0;
+                Program.WriteConfig();
+                await ReplyAsync("Remofved the reset channel.");
+            }
+            else if (raw is ITextChannel channel)
             {
                 Program.ResetChannel = channel.Id;
                 Program.WriteConfig();

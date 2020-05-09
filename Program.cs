@@ -184,7 +184,7 @@ namespace Citadel
 
         private static void TimerElapsed(object sender, ElapsedEventArgs e)
         {
-            var time = e.SignalTime;
+            var time = DateTime.UtcNow;
             if(time >= CurrentResetDate)
             {
                 if(ResetChannel != 0)
