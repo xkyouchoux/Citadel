@@ -56,6 +56,7 @@ namespace Citadel
 
         public static ulong ResetChannel = 0L;
         public static ulong UpdateChannel = 0L;
+        public static ulong ListChannel = 0L;
 
         public static volatile bool Paused = false;
 
@@ -70,6 +71,20 @@ namespace Citadel
         {
             MainAsync().GetAwaiter().GetResult();
             Services.Dispose();
+        }
+
+        public static bool CappedListContains(string name)
+        {
+            if (name == null)
+                return false;
+            foreach(var rsn in CappedList)
+            {
+                if(rsn.ToLower() == name.ToLower())
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public static bool CheckPermission(ulong id, Permission value)
@@ -145,6 +160,7 @@ namespace Citadel
                 CurrentResetMinute = json["reset_minute"].ToObject<uint>();
                 ResetChannel = json["reset_channel"].ToObject<ulong>();
                 UpdateChannel = json["update_channel"].ToObject<ulong>();
+                ListChannel = json["list)channel"].ToObject<ulong>();
                 ResetMessage = json["reset_message"].ToString();
                 CappedMessage = json["capped_message"].ToString();
             }
@@ -171,6 +187,7 @@ namespace Citadel
                 ["reset_minute"] = CurrentResetMinute,
                 ["reset_channel"] = ResetChannel,
                 ["update_channel"] = UpdateChannel,
+                ["list_channel"] = ListChannel,
                 ["reset_message"] = ResetMessage,
                 ["capped_message"] = CappedMessage
             };
@@ -190,6 +207,19 @@ namespace Citadel
                 if(ResetChannel != 0)
                 {
                     PostMessageAsync(ResetChannel, ResetMessage).GetAwaiter().GetResult();
+                }
+                if(ListChannel != 0)
+                {
+                    var message = new StringBuilder();
+                    string[] cappers = CappedList.ToArray();
+
+                    message.Append($"**__Capped citizens for the week of {CurrentResetDate.ToShortDateString()}__**\n");
+
+                    foreach (var capper in cappers)
+                    {
+                        message.Append($"{capper}\n");
+                    }
+                    PostMessageAsync(ListChannel, message.ToString()).GetAwaiter().GetResult();
                 }
                 WriteCookies();
                 PreviousResetDate = CurrentResetDate;
@@ -219,6 +249,7 @@ namespace Citadel
                 {
                     PostMessageAsync(UpdateChannel, message.ToString()).GetAwaiter().GetResult();
                 }
+                CappedList.Sort();
                 WriteCookies();
 
                 Bot.SetStatusAsync(UserStatus.Online);
