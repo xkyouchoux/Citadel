@@ -214,5 +214,21 @@ namespace Citadel
             }
             else await ReplyAsync($"{raw.Name} must be a Text Channel.");
         }
+
+        [Command("setresetmessage")]
+        [RequireMod]
+        public async Task SetResetCommandAsync([Remainder]string message)
+        {
+            Program.ResetMessage = message;
+            Program.WriteConfig();
+            await ReplyAsync("Reset message has been set.");
+        }
+
+        [Command("getresetmessage")]
+        [RequireMod]
+        public async Task GetResetMessage()
+        {
+            await ReplyAsync(Program.ResetMessage);
+        }
     }
 }

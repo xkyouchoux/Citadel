@@ -160,7 +160,7 @@ namespace Citadel
                 CurrentResetMinute = json["reset_minute"].ToObject<uint>();
                 ResetChannel = json["reset_channel"].ToObject<ulong>();
                 UpdateChannel = json["update_channel"].ToObject<ulong>();
-                ListChannel = json["list)channel"].ToObject<ulong>();
+                ListChannel = json["list_channel"].ToObject<ulong>();
                 ResetMessage = json["reset_message"].ToString();
                 CappedMessage = json["capped_message"].ToString();
             }
