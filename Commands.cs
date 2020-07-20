@@ -10,6 +10,17 @@ namespace Citadel
 {
     public class Commands : ModuleBase<SocketCommandContext>
     {
+
+        [Command("prefix")]
+        [RequireAdmin]
+        public async Task PrefixAsync(char prefix)
+        {
+            Program.Prefix = prefix;
+            Program.WriteConfig();
+            await Program.Bot.SetGameAsync($"{prefix}help");
+            await ReplyAsync($"Set prefix to [{prefix}].");
+        }
+
         [Command("permission")]
         [RequireAdmin]
         public async Task AdminAsync(IGuildUser target, [Remainder]string text)
@@ -153,7 +164,7 @@ namespace Citadel
         public async Task HaveICappedAsync([Remainder]string text = null)
         {
             if(text == null)
-                await ReplyAsync(Program.RSNames.ContainsKey(Context.User.Id) ? Program.CappedListContains(Program.RSNames[Context.User.Id]) ? $"{Program.RSNames[Context.User.Id]} has capped this week!" : $"{Program.RSNames[Context.User.Id]} has not capped this week!" : $"Username not set, please set with {Program.PREFIX}setrsn");
+                await ReplyAsync(Program.RSNames.ContainsKey(Context.User.Id) ? Program.CappedListContains(Program.RSNames[Context.User.Id]) ? $"{Program.RSNames[Context.User.Id]} has capped this week!" : $"{Program.RSNames[Context.User.Id]} has not capped this week!" : $"Username not set, please set with {Program.Prefix}setrsn");
             else
                 await ReplyAsync(Program.CappedListContains(text) ? $"{text} has capped this week!" : $"{text} has not capped this week!");
         }

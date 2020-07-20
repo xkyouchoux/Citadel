@@ -26,7 +26,7 @@ namespace Citadel
 
     public class Program
     {
-        public static readonly char PREFIX = '.';
+        public static char Prefix = '?';
 
         public static readonly uint DEFAULT_RESET_DAY = 6;
         public static readonly uint DEFAULT_RESET_HOUR = 0;
@@ -115,7 +115,7 @@ namespace Citadel
             await Bot.LoginAsync(TokenType.Bot, token);
             await Bot.StartAsync();
 
-            await Bot.SetGameAsync($"{PREFIX}help");
+            await Bot.SetGameAsync($"{Prefix}help");
 
             Bot.MessageReceived += async (rawMessage) =>
             {
@@ -125,7 +125,7 @@ namespace Citadel
 
                 var argPos = 0;
 
-                if (!message.HasCharPrefix(PREFIX, ref argPos)) return;
+                if (!message.HasCharPrefix(Prefix, ref argPos)) return;
 
                 var context = new SocketCommandContext(Bot, message);
 
@@ -196,6 +196,7 @@ namespace Citadel
                 ListChannel = json["list_channel"].ToObject<ulong>();
                 ResetMessage = json["reset_message"].ToString();
                 CappedMessage = json["capped_message"].ToString();
+                Prefix = json["prefix"].ToObject<char>();
             }
         }
 
@@ -222,7 +223,8 @@ namespace Citadel
                 ["update_channel"] = UpdateChannel,
                 ["list_channel"] = ListChannel,
                 ["reset_message"] = ResetMessage,
-                ["capped_message"] = CappedMessage
+                ["capped_message"] = CappedMessage,
+                ["prefix"] = Prefix
             };
             File.WriteAllText(CONFIG_PATH, json.ToString());
         }
