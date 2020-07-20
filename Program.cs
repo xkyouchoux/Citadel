@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -29,7 +30,7 @@ namespace Citadel
         public static readonly uint DEFAULT_RESET_MINUTE = 0;
 
         public static readonly string DEFAULT_RESET_MESSAGE = "<@&206234654091509760> :star: **Citadel has reset!** :european_castle:";
-        public static readonly string DEFAULT_CAPPED_MESSAGE = "**{0}** has capped!\n";
+        public static readonly string[] DEFAULT_CAPPED_MESSAGES = new string[] { "**{0}** has capped!" };
 
         public static readonly string CONFIG_PATH;
         public static readonly string RSN_PATH;
@@ -56,11 +57,13 @@ namespace Citadel
         public static volatile bool Paused = false;
 
         public static volatile List<string> CappedList;
+        public static List<string> CappedMessages = DEFAULT_CAPPED_MESSAGES.ToList();
+
+        public static Random Random = new Random();
 
         public static HttpClient Client;
 
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
-        public static string CappedMessage = DEFAULT_CAPPED_MESSAGE;
 
         private static bool Updating = false;
 
@@ -200,8 +203,8 @@ namespace Citadel
                 UpdateChannel = json["update_channel"].ToObject<ulong>();
                 ListChannel = json["list_channel"].ToObject<ulong>();
                 ResetMessage = json["reset_message"].ToString();
-                CappedMessage = json["capped_message"].ToString();
                 Prefix = json["prefix"].ToObject<char>();
+                CappedMessages = json["capped_messages"].ToObject<List<string>>();
             }
         }
 
@@ -228,8 +231,8 @@ namespace Citadel
                 ["update_channel"] = UpdateChannel,
                 ["list_channel"] = ListChannel,
                 ["reset_message"] = ResetMessage,
-                ["capped_message"] = CappedMessage,
-                ["prefix"] = Prefix
+                ["prefix"] = Prefix,
+                ["capped_messages"] = JToken.FromObject(CappedMessages)
             };
             File.WriteAllText(CONFIG_PATH, json.ToString());
         }
@@ -255,7 +258,7 @@ namespace Citadel
                     if (!CappedList.Contains(capper))
                     {
                         CappedList.Add(capper);
-                        message.Append(string.Format(CappedMessage, capper));
+                        message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper));
                     }
                 }
 

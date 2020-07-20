@@ -44,7 +44,7 @@ namespace Citadel
                     }
 
                     var result = new StringBuilder();
-                    result.Append($"__Users with permission {permission}__");
+                    result.Append($"__Users with permission {permission}__\n");
 
                     foreach (var item in list)
                     {
@@ -287,6 +287,36 @@ namespace Citadel
         public async Task GetResetMessage()
         {
             await ReplyAsync(Program.ResetMessage);
+        }
+
+        [Command("addmessage")]
+        [RequireMod]
+        public async Task AddCappedMessageAsync([Remainder]string text)
+        {
+            if (!text.Contains("{0}"))
+                await ReplyAsync("Capped message must contain '{0}'!");
+            else if (Program.CappedMessages.Contains(text))
+                await ReplyAsync($"Capped messages already contains '{text}'.");
+            else
+            {
+                Program.CappedMessages.Add(text);
+                Program.WriteConfig();
+                await ReplyAsync($"Added '{text}' to the capped messages.");
+            }
+        }
+
+        [Command("removemessage")]
+        [RequireMod]
+        public async Task RemoveCappedMessageAsync([Remainder]string text)
+        {
+            if (!Program.CappedMessages.Contains(text))
+                await ReplyAsync($"Capped messages does not contain '{text}'.");
+            else
+            {
+                Program.CappedMessages.Remove(text);
+                Program.WriteConfig();
+                await ReplyAsync($"Removed '{text}' from the capped messages.");
+            }
         }
     }
 }
