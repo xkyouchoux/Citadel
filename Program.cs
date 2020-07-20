@@ -258,7 +258,8 @@ namespace Citadel
                     if (!CappedList.Contains(capper))
                     {
                         CappedList.Add(capper);
-                        message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper));
+                        if (CappedMessages.Count > 0)
+                            message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper));
                     }
                 }
 

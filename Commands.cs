@@ -14,7 +14,7 @@ namespace Citadel
     {
 
         [Command("prefix")]
-        [RequireAdmin]
+        [RequireMod]
         public async Task PrefixAsync(char prefix)
         {
             Program.Prefix = prefix;
@@ -171,28 +171,38 @@ namespace Citadel
             }
         }
 
-        [Command("add")]
+        [Command("addcappers")]
         [RequireMod]
-        public async Task AddAsync(params string[] names)
+        public async Task AddCappersAsync(params string[] names)
         {
+            var tmp = new List<string>();
             foreach (var name in names)
             {
-                Program.CappedList.Add(name);
+                if (!Program.CappedList.Contains(name))
+                {
+                    Program.CappedList.Add(name);
+                    tmp.Add(name);
+                }
             }
             Program.WriteCookies();
-            await ReplyAsync("Added all to capped list.");
+            await ReplyAsync($"Added [{string.Join(", ", tmp)}] to capped list.");
         }
 
-        [Command("remove")]
+        [Command("removecappers")]
         [RequireMod]
-        public async Task RemoveAsync(params string[] names)
+        public async Task RemoveCappersAsync(params string[] names)
         {
+            var tmp = new List<string>();
             foreach (var name in names)
             {
-                Program.CappedList.Remove(name);
+                if (Program.CappedList.Contains(name))
+                {
+                    Program.CappedList.Remove(name);
+                    tmp.Add(name);
+                }
             }
             Program.WriteCookies();
-            await ReplyAsync("Removed all from capped list.");
+            await ReplyAsync($"Removed [{string.Join(", ", tmp)}] from capped list.");
         }
 
         [Command("resetdate")]
@@ -289,9 +299,23 @@ namespace Citadel
             await ReplyAsync(Program.ResetMessage);
         }
 
+        [Command("getmessages")]
+        [RequireMod]
+        public async Task GetMessages()
+        {
+            var result = new StringBuilder();
+            result.Append("__Capped Messages__\n");
+
+            foreach (var message in Program.CappedMessages)
+            {
+                result.Append($"{message}\n");
+            }
+            await ReplyAsync(result.ToString());
+        }
+
         [Command("addmessage")]
         [RequireMod]
-        public async Task AddCappedMessageAsync([Remainder]string text)
+        public async Task AddMessageAsync([Remainder] string text)
         {
             if (!text.Contains("{0}"))
                 await ReplyAsync("Capped message must contain '{0}'!");
@@ -307,7 +331,7 @@ namespace Citadel
 
         [Command("removemessage")]
         [RequireMod]
-        public async Task RemoveCappedMessageAsync([Remainder]string text)
+        public async Task RemoveMessageAsync([Remainder] string text)
         {
             if (!Program.CappedMessages.Contains(text))
                 await ReplyAsync($"Capped messages does not contain '{text}'.");
