@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -25,7 +26,7 @@ namespace Citadel
 
     public class Program
     {
-        public static readonly char PREFIX = '>';
+        public static readonly char PREFIX = '.';
 
         public static readonly uint DEFAULT_RESET_DAY = 6;
         public static readonly uint DEFAULT_RESET_HOUR = 0;
@@ -52,8 +53,6 @@ namespace Citadel
         public static CommandService Commands;
         public static ServiceProvider Services;
 
-        public static Timer Timer;
-
         public static ulong ResetChannel = 0L;
         public static ulong UpdateChannel = 0L;
         public static ulong ListChannel = 0L;
@@ -62,15 +61,18 @@ namespace Citadel
 
         public static volatile List<string> CappedList;
 
+        public static HttpClient Client;
+
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
         public static string CappedMessage = DEFAULT_CAPPED_MESSAGE;
 
         private static bool Updating = false;
 
+        private static DateTime _next = DateTime.MinValue;
+
         public static void Main()
         {
             MainAsync().GetAwaiter().GetResult();
-            Services.Dispose();
         }
 
         public static bool CappedListContains(string name)
@@ -105,6 +107,7 @@ namespace Citadel
 
             Bot = Services.GetRequiredService<DiscordSocketClient>();
             Commands = Services.GetRequiredService<CommandService>();
+            Client = Services.GetRequiredService<HttpClient>();
             Bot.Log += LogAsync;
             Commands.Log += LogAsync;
 
@@ -131,9 +134,39 @@ namespace Citadel
 
             await Commands.AddModuleAsync<Commands>(Services);
 
-            Timer.Start();
+            Thread t = new Thread(() =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        var currentTime = Trim(DateTime.UtcNow);
+                        if(currentTime >= _next)
+                        {
+                            TimerElapsed(currentTime);
+                            _next = currentTime.AddMinutes(1);
+                        }
+                        Thread.Sleep(1);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+            })
+            {
+                IsBackground = true
+            };
+            t.Start();
+
+            _next = Trim(DateTime.UtcNow);
 
             await Task.Delay(-1);
+        }
+
+        private static DateTime Trim(DateTime time)
+        {
+            return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0, DateTimeKind.Utc);
         }
 
         private static Task LogAsync(LogMessage message)
@@ -199,40 +232,14 @@ namespace Citadel
             File.WriteAllText(CookiesPath, new JArray(CappedList.ToArray()).ToString());
         }
 
-        private static void TimerElapsed(object sender, ElapsedEventArgs e)
+        private static void TimerElapsed(DateTime eventTime)
         {
-            var time = DateTime.UtcNow;
-            if(time >= CurrentResetDate)
-            {
-                if(ResetChannel != 0)
-                {
-                    PostMessageAsync(ResetChannel, ResetMessage).GetAwaiter().GetResult();
-                }
-                if(ListChannel != 0)
-                {
-                    var message = new StringBuilder();
-                    string[] cappers = CappedList.ToArray();
-
-                    message.Append($"**__Capped citizens for the week of {CurrentResetDate.ToShortDateString()}__**\n");
-
-                    foreach (var capper in cappers)
-                    {
-                        message.Append($"{capper}\n");
-                    }
-                    PostMessageAsync(ListChannel, message.ToString()).GetAwaiter().GetResult();
-                }
-                WriteCookies();
-                PreviousResetDate = CurrentResetDate;
-                CurrentResetDate = CurrentResetDate.AddDays(7);
-                CappedList.Clear();
-            }
-            else if(!Paused && time.Minute % 10 == 0 && !Updating)
+            if(!Paused && !Updating && eventTime.Minute % 10 == 0)
             {
                 Updating = true;
-                Console.WriteLine($"Started Update at {DateTime.UtcNow}");
                 Bot.SetStatusAsync(UserStatus.Idle);
 
-                string[] cappers = Downloader.GetCappersList();
+                string[] cappers = Downloader.GetCappersList(Client);
 
                 var message = new StringBuilder();
 
@@ -254,7 +261,30 @@ namespace Citadel
 
                 Bot.SetStatusAsync(UserStatus.Online);
                 Updating = false;
-                Console.WriteLine($"Finished Update at {DateTime.UtcNow}");
+                Console.WriteLine(new LogMessage(LogSeverity.Info, "Timer", $"Update finished in {(DateTime.UtcNow - eventTime).TotalMilliseconds}ms."));
+            }
+            if (eventTime == CurrentResetDate)
+            {
+                if (ResetChannel != 0)
+                {
+                    PostMessageAsync(ResetChannel, ResetMessage).GetAwaiter().GetResult();
+                }
+                if (ListChannel != 0)
+                {
+                    var message = new StringBuilder();
+                    string[] cappers = CappedList.ToArray();
+
+                    message.Append($"**__Capped citizens for the week of {CurrentResetDate.ToShortDateString()}__**\n");
+
+                    foreach (var capper in cappers)
+                    {
+                        message.Append($"{capper}\n");
+                    }
+                    PostMessageAsync(ListChannel, message.ToString()).GetAwaiter().GetResult();
+                }
+                WriteCookies();
+                ProgressDate();
+                CappedList.Clear();
             }
         }
 
@@ -307,15 +337,13 @@ namespace Citadel
             COOKIE_DIRECTORY = $"{Directory.GetCurrentDirectory()}/Log";
             Directory.CreateDirectory(RSN_PATH);
             ReadConfig();
-            Timer = new Timer(1000);
-            Timer.Elapsed += TimerElapsed;
             var now = DateTime.UtcNow;
             var date = now;
             while (date.DayOfWeek != (DayOfWeek)CurrentResetDay)
             {
                 date = date.AddDays(1);
             }
-            date = new DateTime(date.Year, date.Month, date.Day, (int)CurrentResetHour, (int)CurrentResetMinute, 0);
+            date = new DateTime(date.Year, date.Month, date.Day, (int)CurrentResetHour, (int)CurrentResetMinute, 0, DateTimeKind.Utc);
             if(now > date)
             {
                 PreviousResetDate = date;

@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Citadel
 {
@@ -18,32 +20,59 @@ namespace Citadel
         public static readonly int PROFILE_PRIVATE_CODE = -4;
 
         public static readonly string CLAN_NAME = "Kingdom of Ashdale";
-        public static readonly string ACTIVITY_LINK = "https://apps.runescape.com/runemetrics/profile/profile?user={0}&activities=20";
 
-        private static WebClient _client;
         private static TimeZoneInfo _timeZone;
 
-        public static string[] GetCappersList()
+        private static JObject[] GetAlogs(HttpClient client, string[] clanList)
+        {
+            var names = clanList.ToList();
+
+            var tasks = new List<Task<string>>();
+
+            while(names.Count > 0)
+            {
+                var count = Math.Min(20, names.Count);
+
+                var range = names.GetRange(0, count);
+                range.ForEach((name) => tasks.Add(client.GetStringAsync($"https://apps.runescape.com/runemetrics/profile/profile?user={name}&activities=20")));
+                names.RemoveRange(0, count);
+                Task.WhenAll(tasks).GetAwaiter().GetResult();
+            }
+
+            var raw = Task.WhenAll(tasks).GetAwaiter().GetResult();
+
+            var result = new JObject[raw.Length];
+
+            for(int index = 0; index < result.Length; index++)
+            {
+                result[index] = JObject.Parse(raw[index]);
+            }
+
+            return result;
+        }
+
+        public static string[] GetCappersList(HttpClient client)
         {
             List<string> result = new List<string>();
-            string[] members = GetClanList();
-            foreach(var member in members)
+            var members = GetClanList(client);
+            var alogs = GetAlogs(client, members);
+            for(int index = 0; index < members.Length; index++)
             {
-                var code = CheckFeed(member);
-                if(code == CAPPED_CODE)
+                var code = CheckFeed(alogs[index]);
+                if (code == CAPPED_CODE)
                 {
-                    result.Add(member);
+                    result.Add(members[index]);
                 }
             }
             return result.ToArray();
         }
 
-        public static string[] GetClanList()
+        public static string[] GetClanList(HttpClient client)
         {
             List<string> result = new List<string>();
             try
             {
-                using (var reader = new StringReader(_client.DownloadString($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={CLAN_NAME}")))
+                using (var reader = new StringReader(client.GetStringAsync($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={CLAN_NAME}").GetAwaiter().GetResult()))
                 {
                     for (string line = reader.ReadLine(); (line = reader.ReadLine()) != null;)
                     {
@@ -58,11 +87,10 @@ namespace Citadel
             return result.ToArray();
         }
 
-        public static int CheckFeed(string username)
+        public static int CheckFeed(JObject json)
         {
             try
             {
-                var json = JObject.Parse(_client.DownloadString(string.Format(ACTIVITY_LINK, username)));
                 if (json.ContainsKey("error"))
                 {
                     var error = json["error"].ToString();
@@ -99,7 +127,7 @@ namespace Citadel
             var builder = new StringBuilder(value.Length);
             foreach(var character in value)
             {
-                if (char.IsLetterOrDigit(character))
+                if (char.IsLetterOrDigit(character) || character == '_')
                     builder.Append(character);
                 else
                     builder.Append(' ');
@@ -109,7 +137,6 @@ namespace Citadel
 
         static Downloader()
         {
-            _client = new WebClient();
             _timeZone = TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time");
         }
     }
