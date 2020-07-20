@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,7 +28,7 @@ namespace Citadel
 
             var tasks = new List<Task<string>>();
 
-            while(names.Count > 0)
+            while (names.Count > 0)
             {
                 var count = Math.Min(20, names.Count);
 
@@ -43,7 +42,7 @@ namespace Citadel
 
             var result = new JObject[raw.Length];
 
-            for(int index = 0; index < result.Length; index++)
+            for (int index = 0; index < result.Length; index++)
             {
                 result[index] = JObject.Parse(raw[index]);
             }
@@ -56,7 +55,7 @@ namespace Citadel
             List<string> result = new List<string>();
             var members = GetClanList(client);
             var alogs = GetAlogs(client, members);
-            for(int index = 0; index < members.Length; index++)
+            for (int index = 0; index < members.Length; index++)
             {
                 var code = CheckFeed(alogs[index]);
                 if (code == CAPPED_CODE)
@@ -105,7 +104,7 @@ namespace Citadel
                 else
                 {
                     var activities = json["activities"] as JArray;
-                    foreach(var activity in activities)
+                    foreach (var activity in activities)
                     {
                         var date = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse(activity["date"].ToString()), _timeZone);
                         if (activity["text"].ToString() == "Capped at my Clan Citadel." && date >= Program.PreviousResetDate)
@@ -125,7 +124,7 @@ namespace Citadel
         private static string Fix(string value)
         {
             var builder = new StringBuilder(value.Length);
-            foreach(var character in value)
+            foreach (var character in value)
             {
                 if (char.IsLetterOrDigit(character) || character == '_')
                     builder.Append(character);

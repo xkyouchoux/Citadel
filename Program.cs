@@ -5,21 +5,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace Citadel
 {
     public enum Permission
     {
-        User  = 0,
+        User = 0,
         Mod = 1,
         Admin = 2
     }
@@ -79,9 +75,9 @@ namespace Citadel
         {
             if (name == null)
                 return false;
-            foreach(var rsn in CappedList)
+            foreach (var rsn in CappedList)
             {
-                if(rsn.ToLower() == name.ToLower())
+                if (rsn.ToLower() == name.ToLower())
                 {
                     return true;
                 }
@@ -132,6 +128,15 @@ namespace Citadel
                 await Commands.ExecuteAsync(context, argPos, Services);
             };
 
+            Commands.CommandExecuted += async (command, context, result) =>
+            {
+                if (!command.IsSpecified)
+                    return;
+                Console.WriteLine(new LogMessage(LogSeverity.Info, "Command", $"User:[{context.User.Username}:{context.User.Id}] Message:[{context.Message}]"));
+
+                await Task.CompletedTask;
+            };
+
             await Commands.AddModuleAsync<Commands>(Services);
 
             Thread t = new Thread(() =>
@@ -141,7 +146,7 @@ namespace Citadel
                     try
                     {
                         var currentTime = Trim(DateTime.UtcNow);
-                        if(currentTime >= _next)
+                        if (currentTime >= _next)
                         {
                             TimerElapsed(currentTime);
                             _next = currentTime.AddMinutes(1);
@@ -184,7 +189,7 @@ namespace Citadel
                 var json = JObject.Parse(File.ReadAllText(CONFIG_PATH));
                 Permissions.Clear();
                 var permissions = json["permissions"];
-                foreach(var permission in permissions)
+                foreach (var permission in permissions)
                 {
                     Permissions[permission["id"].ToObject<ulong>()] = (Permission)permission["value"].ToObject<int>();
                 }
@@ -204,7 +209,7 @@ namespace Citadel
         {
 
             JArray permissions = new JArray();
-            foreach(var Permission in Permissions)
+            foreach (var Permission in Permissions)
             {
                 JObject permission = new JObject
                 {
@@ -236,7 +241,7 @@ namespace Citadel
 
         private static void TimerElapsed(DateTime eventTime)
         {
-            if(!Paused && !Updating && eventTime.Minute % 10 == 0)
+            if (!Paused && !Updating && eventTime.Minute % 10 == 0)
             {
                 Updating = true;
                 Bot.SetStatusAsync(UserStatus.Idle);
@@ -245,7 +250,7 @@ namespace Citadel
 
                 var message = new StringBuilder();
 
-                foreach(var capper in cappers)
+                foreach (var capper in cappers)
                 {
                     if (!CappedList.Contains(capper))
                     {
@@ -254,7 +259,7 @@ namespace Citadel
                     }
                 }
 
-                if(message.Length > 0 && UpdateChannel != 0)
+                if (message.Length > 0 && UpdateChannel != 0)
                 {
                     PostMessageAsync(UpdateChannel, message.ToString()).GetAwaiter().GetResult();
                 }
@@ -294,11 +299,11 @@ namespace Citadel
         {
             if (Bot.ConnectionState != ConnectionState.Connected)
                 await Task.Delay(1);
-            foreach(var guild in Bot.Guilds)
+            foreach (var guild in Bot.Guilds)
             {
-                foreach(var textChannel in guild.TextChannels)
+                foreach (var textChannel in guild.TextChannels)
                 {
-                    if(textChannel.Id == channel)
+                    if (textChannel.Id == channel)
                     {
                         await textChannel.SendMessageAsync(message);
                     }
@@ -346,7 +351,7 @@ namespace Citadel
                 date = date.AddDays(1);
             }
             date = new DateTime(date.Year, date.Month, date.Day, (int)CurrentResetHour, (int)CurrentResetMinute, 0, DateTimeKind.Utc);
-            if(now > date)
+            if (now > date)
             {
                 PreviousResetDate = date;
                 CurrentResetDate = date.AddDays(7);
@@ -364,7 +369,7 @@ namespace Citadel
                     CappedList.Add(item.ToString());
             }
             var ids = Directory.GetFiles(RSN_PATH);
-            foreach(var id in ids)
+            foreach (var id in ids)
             {
 
                 RSNames.Add(ulong.Parse(new FileInfo(id).Name), File.ReadAllText(id));

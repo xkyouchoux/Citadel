@@ -2,7 +2,9 @@
 using Discord.Commands;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,7 +25,52 @@ namespace Citadel
 
         [Command("permission")]
         [RequireAdmin]
-        public async Task AdminAsync(IGuildUser target, [Remainder]string text)
+        public async Task PermissionAsync(string text)
+        {
+            var success = Enum.TryParse(text, true, out Permission permission);
+            if (success)
+            {
+                if (permission == Permission.User)
+                    await ReplyAsync("To many.");
+                else
+                {
+                    var list = new List<ulong>();
+                    foreach (var perm in Program.Permissions)
+                    {
+                        if (perm.Value == permission)
+                        {
+                            list.Add(perm.Key);
+                        }
+                    }
+
+                    var result = new StringBuilder();
+                    result.Append($"__Users with permission {permission}__");
+
+                    foreach (var item in list)
+                    {
+                        var member = Context.Guild.Users.Where((user) => user.Id == item);
+                        if (member.Count() == 1)
+                        {
+                            result.Append($"{member.ElementAt(0).Username}\n");
+                        }
+                        else
+                        {
+                            result.Append($"Unknown ID: {item}\n");
+                        }
+                    }
+
+                    await ReplyAsync(result.ToString());
+                }
+            }
+            else
+            {
+                await ReplyAsync($"Unknown permission level '{text}', options are mod or admin.");
+            }
+        }
+
+        [Command("permission")]
+        [RequireAdmin]
+        public async Task AdminAsync(IGuildUser target, [Remainder] string text)
         {
             var id = Context.User.Id;
             if (id == target.Id)
@@ -44,7 +91,7 @@ namespace Citadel
                     }
                     else
                     {
-                        if((int)permission >= contextRank)
+                        if ((int)permission >= contextRank)
                         {
                             await ReplyAsync($"Cannot set {target.Username} to a rank equal to or above your own.");
                         }
@@ -79,7 +126,7 @@ namespace Citadel
         {
             var commands = Program.Commands.GetExecutableCommandsAsync(Context, Program.Services);
             var result = new StringBuilder();
-            foreach(var command in commands.Result)
+            foreach (var command in commands.Result)
             {
                 if (command.Name == "help") continue;
                 result.Append($"{command.Name}\n");
@@ -89,11 +136,11 @@ namespace Citadel
 
         [Command("list")]
         [RequireMod]
-        public async Task ListAsync([Remainder]string date = null)
+        public async Task ListAsync([Remainder] string date = null)
         {
             var message = new StringBuilder();
-            
-            if(date == null)
+
+            if (date == null)
             {
                 string[] cappers = Program.CappedList.ToArray();
 
@@ -107,7 +154,7 @@ namespace Citadel
             }
             else
             {
-                if(File.Exists(Program.COOKIE_DIRECTORY + $"/{date.Replace("/", "-")}.json"))
+                if (File.Exists(Program.COOKIE_DIRECTORY + $"/{date.Replace("/", "-")}.json"))
                 {
                     JArray cookies = JArray.Parse(File.ReadAllText(Program.COOKIE_DIRECTORY + $"/{date.Replace("/", "-")}.json"));
                     message.Append($"**__Capped citizens for the week of {date.Replace("-", "/")}__**\n");
@@ -128,7 +175,7 @@ namespace Citadel
         [RequireMod]
         public async Task AddAsync(params string[] names)
         {
-            foreach(var name in names)
+            foreach (var name in names)
             {
                 Program.CappedList.Add(name);
             }
@@ -140,7 +187,7 @@ namespace Citadel
         [RequireMod]
         public async Task RemoveAsync(params string[] names)
         {
-            foreach(var name in names)
+            foreach (var name in names)
             {
                 Program.CappedList.Remove(name);
             }
@@ -153,7 +200,7 @@ namespace Citadel
             => await ReplyAsync($"Current citadel reset is **{Program.CurrentResetDate}**.");
 
         [Command("setrsn")]
-        public async Task SetRSNAsync([Remainder]string text)
+        public async Task SetRSNAsync([Remainder] string text)
         {
             Program.RSNames[Context.User.Id] = text;
             await File.WriteAllTextAsync(Program.RSN_PATH + "/" + Context.User.Id, text);
@@ -161,9 +208,9 @@ namespace Citadel
         }
 
         [Command("haveicapped")]
-        public async Task HaveICappedAsync([Remainder]string text = null)
+        public async Task HaveICappedAsync([Remainder] string text = null)
         {
-            if(text == null)
+            if (text == null)
                 await ReplyAsync(Program.RSNames.ContainsKey(Context.User.Id) ? Program.CappedListContains(Program.RSNames[Context.User.Id]) ? $"{Program.RSNames[Context.User.Id]} has capped this week!" : $"{Program.RSNames[Context.User.Id]} has not capped this week!" : $"Username not set, please set with {Program.Prefix}setrsn");
             else
                 await ReplyAsync(Program.CappedListContains(text) ? $"{text} has capped this week!" : $"{text} has not capped this week!");
@@ -173,7 +220,7 @@ namespace Citadel
         [RequireMod]
         public async Task SetUpdateChannelAsync(IGuildChannel raw = null)
         {
-            if(raw == null)
+            if (raw == null)
             {
                 Program.UpdateChannel = 0;
                 Program.WriteConfig();
@@ -192,7 +239,7 @@ namespace Citadel
         [RequireMod]
         public async Task SetResetChannelAsync(IGuildChannel raw = null)
         {
-            if(raw == null)
+            if (raw == null)
             {
                 Program.ResetChannel = 0;
                 Program.WriteConfig();
@@ -211,13 +258,13 @@ namespace Citadel
         [RequireMod]
         public async Task SetListChannelAsync(IGuildChannel raw = null)
         {
-            if(raw == null)
+            if (raw == null)
             {
                 Program.ListChannel = 0;
                 Program.WriteConfig();
                 await ReplyAsync("Removed the list channel.");
             }
-            else if(raw is ITextChannel channel)
+            else if (raw is ITextChannel channel)
             {
                 Program.ListChannel = channel.Id;
                 Program.WriteConfig();
@@ -228,7 +275,7 @@ namespace Citadel
 
         [Command("setresetmessage")]
         [RequireMod]
-        public async Task SetResetCommandAsync([Remainder]string message)
+        public async Task SetResetCommandAsync([Remainder] string message)
         {
             Program.ResetMessage = message;
             Program.WriteConfig();
