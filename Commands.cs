@@ -12,6 +12,13 @@ namespace Citadel
 {
     public class Commands : ModuleBase<SocketCommandContext>
     {
+        [Command("update")]
+        [RequireHost]
+        public async Task UpdateAsync()
+        {
+            Program.UPDATE_READY = true;
+            await Task.CompletedTask;
+        }
 
         [Command("prefix")]
         [RequireMod]

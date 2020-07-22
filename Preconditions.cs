@@ -5,6 +5,17 @@ using System.Threading.Tasks;
 
 namespace Citadel
 {
+    public class RequireHostAttribute : PreconditionAttribute
+    {
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        {
+            if (context.User.Id == Program.Host)
+                return Task.FromResult(PreconditionResult.FromSuccess());
+            else
+                return Task.FromResult(PreconditionResult.FromError("Must be Host."));
+        }
+    }
+
     public class RequireAdminAttribute : PreconditionAttribute
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)

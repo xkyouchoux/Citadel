@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -54,6 +55,10 @@ namespace Citadel
         public static ulong UpdateChannel = 0L;
         public static ulong ListChannel = 0L;
 
+        public static bool UPDATE_READY = false;
+
+        public static ulong Host = 0L;
+
         public static volatile bool Paused = false;
 
         public static volatile List<string> CappedList;
@@ -96,8 +101,12 @@ namespace Citadel
 
         public static async Task MainAsync()
         {
+            if (File.Exists($"{Directory.GetCurrentDirectory()}/Citadel-old.exe"))
+                File.Delete($"{Directory.GetCurrentDirectory()}/Citadel-old.exe");
+
             Services = GetServices();
             string token = Environment.GetEnvironmentVariable("citadel-bot-token");
+            Host = ulong.Parse(Environment.GetEnvironmentVariable("citadel-bot-host"));
             if (token == null || token.Length == 0)
             {
                 Console.WriteLine("Invalid bot token, please set the token environtment variable 'citadel-bot-token' to a valid token.");
@@ -142,9 +151,11 @@ namespace Citadel
 
             await Commands.AddModuleAsync<Commands>(Services);
 
-            Thread t = new Thread(() =>
+            _next = Trim(DateTime.UtcNow);
+
+            await Task.Run(() =>
             {
-                while (true)
+                while (!UPDATE_READY)
                 {
                     try
                     {
@@ -161,15 +172,18 @@ namespace Citadel
                         Console.WriteLine(e);
                     }
                 }
-            })
-            {
-                IsBackground = true
-            };
-            t.Start();
+            });
 
-            _next = Trim(DateTime.UtcNow);
+            await Bot.StopAsync();
 
-            await Task.Delay(-1);
+            var bytes = await Client.GetByteArrayAsync(Environment.GetEnvironmentVariable("citadel-bot-url"));
+
+            File.Move($"{Directory.GetCurrentDirectory()}/Citadel.exe", $"{Directory.GetCurrentDirectory()}/Citadel-old.exe");
+            File.WriteAllBytes($"{Directory.GetCurrentDirectory()}/Citadel.exe", bytes);
+
+            Process.Start($"{Directory.GetCurrentDirectory()}/run.bat");
+
+            Process.GetCurrentProcess().Kill();
         }
 
         private static DateTime Trim(DateTime time)
@@ -259,7 +273,7 @@ namespace Citadel
                     {
                         CappedList.Add(capper);
                         if (CappedMessages.Count > 0)
-                            message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper));
+                            message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper) + "\n");
                     }
                 }
 
