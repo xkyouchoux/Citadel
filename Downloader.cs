@@ -20,7 +20,7 @@ namespace Citadel
 
         public static readonly string CLAN_NAME = "Kingdom of Ashdale";
 
-        private static TimeZoneInfo _timeZone;
+        private static readonly TimeZoneInfo _timeZone;
 
         private static JObject[] GetAlogs(HttpClient client, string[] clanList)
         {
@@ -94,11 +94,20 @@ namespace Citadel
                 {
                     var error = json["error"].ToString();
                     if (error == "PROFILE_PRIVATE")
+                    {
                         return PROFILE_PRIVATE_CODE;
+                    }
+
                     if (error == "NO_PROFILE")
+                    {
                         return NO_PROFILE_CODE;
+                    }
+
                     if (error == "NOT_A_MEMBER")
+                    {
                         return NOT_A_MEMBER_CODE;
+                    }
+
                     return EXCEPTION_CODE;
                 }
                 else
@@ -127,9 +136,13 @@ namespace Citadel
             foreach (var character in value)
             {
                 if (char.IsLetterOrDigit(character) || character == '_')
+                {
                     builder.Append(character);
+                }
                 else
+                {
                     builder.Append(' ');
+                }
             }
             return builder.ToString();
         }

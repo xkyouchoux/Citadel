@@ -82,7 +82,10 @@ namespace Citadel
         public static bool CappedListContains(string name)
         {
             if (name == null)
+            {
                 return false;
+            }
+
             foreach (var rsn in CappedList)
             {
                 if (rsn.ToLower() == name.ToLower())
@@ -95,14 +98,20 @@ namespace Citadel
 
         public static bool CheckPermission(ulong id, Permission value)
         {
-            if (!Permissions.ContainsKey(id)) return false;
+            if (!Permissions.ContainsKey(id))
+            {
+                return false;
+            }
+
             return (int)Permissions[id] >= (int)value;
         }
 
         public static async Task MainAsync()
         {
             if (File.Exists($"{Directory.GetCurrentDirectory()}/Citadel-old.exe"))
+            {
                 File.Delete($"{Directory.GetCurrentDirectory()}/Citadel-old.exe");
+            }
 
             Services = GetServices();
             string token = Environment.GetEnvironmentVariable("citadel-bot-token");
@@ -128,12 +137,22 @@ namespace Citadel
             Bot.MessageReceived += async (rawMessage) =>
             {
 
-                if (!(rawMessage is SocketUserMessage message)) return;
-                if (message.Source != MessageSource.User) return;
+                if (!(rawMessage is SocketUserMessage message))
+                {
+                    return;
+                }
+
+                if (message.Source != MessageSource.User)
+                {
+                    return;
+                }
 
                 var argPos = 0;
 
-                if (!message.HasCharPrefix(Prefix, ref argPos)) return;
+                if (!message.HasCharPrefix(Prefix, ref argPos))
+                {
+                    return;
+                }
 
                 var context = new SocketCommandContext(Bot, message);
 
@@ -143,7 +162,10 @@ namespace Citadel
             Commands.CommandExecuted += async (command, context, result) =>
             {
                 if (!command.IsSpecified)
+                {
                     return;
+                }
+
                 Console.WriteLine(new LogMessage(LogSeverity.Info, "Command", $"User:[{context.User.Username}:{context.User.Id}] Message:[{context.Message}]"));
 
                 await Task.CompletedTask;
@@ -200,7 +222,9 @@ namespace Citadel
         private static void ReadConfig()
         {
             if (!File.Exists(CONFIG_PATH))
+            {
                 WriteConfig();
+            }
             else
             {
                 var json = JObject.Parse(File.ReadAllText(CONFIG_PATH));
@@ -273,7 +297,9 @@ namespace Citadel
                     {
                         CappedList.Add(capper);
                         if (CappedMessages.Count > 0)
+                        {
                             message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper) + "\n");
+                        }
                     }
                 }
 
@@ -316,7 +342,10 @@ namespace Citadel
         private static async Task PostMessageAsync(ulong channel, string message)
         {
             if (Bot.ConnectionState != ConnectionState.Connected)
+            {
                 await Task.Delay(1);
+            }
+
             foreach (var guild in Bot.Guilds)
             {
                 foreach (var textChannel in guild.TextChannels)
@@ -384,7 +413,9 @@ namespace Citadel
             {
                 var array = JArray.Parse(File.ReadAllText(path));
                 foreach (var item in array)
+                {
                     CappedList.Add(item.ToString());
+                }
             }
             var ids = Directory.GetFiles(RSN_PATH);
             foreach (var id in ids)

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Citadel
@@ -38,7 +39,9 @@ namespace Citadel
             if (success)
             {
                 if (permission == Permission.User)
+                {
                     await ReplyAsync("To many.");
+                }
                 else
                 {
                     var list = new List<ulong>();
@@ -135,7 +138,11 @@ namespace Citadel
             var result = new StringBuilder();
             foreach (var command in commands.Result)
             {
-                if (command.Name == "help") continue;
+                if (command.Name == "help")
+                {
+                    continue;
+                }
+
                 result.Append($"{command.Name}\n");
             }
             await Context.User.SendMessageAsync($"**__Available Commands__**\n{result}");
@@ -228,9 +235,13 @@ namespace Citadel
         public async Task HaveICappedAsync([Remainder] string text = null)
         {
             if (text == null)
+            {
                 await ReplyAsync(Program.RSNames.ContainsKey(Context.User.Id) ? Program.CappedListContains(Program.RSNames[Context.User.Id]) ? $"{Program.RSNames[Context.User.Id]} has capped this week!" : $"{Program.RSNames[Context.User.Id]} has not capped this week!" : $"Username not set, please set with {Program.Prefix}setrsn");
+            }
             else
+            {
                 await ReplyAsync(Program.CappedListContains(text) ? $"{text} has capped this week!" : $"{text} has not capped this week!");
+            }
         }
 
         [Command("setupdatechannel")]
@@ -249,7 +260,10 @@ namespace Citadel
                 Program.WriteConfig();
                 await ReplyAsync($"Set the Update channel to {channel.Name}.");
             }
-            else await ReplyAsync($"{raw.Name} must be a Text Channel.");
+            else
+            {
+                await ReplyAsync($"{raw.Name} must be a Text Channel.");
+            }
         }
 
         [Command("setresetchannel")]
@@ -268,7 +282,10 @@ namespace Citadel
                 Program.WriteConfig();
                 await ReplyAsync($"Set the Reset channel to {channel.Name}.");
             }
-            else await ReplyAsync($"{raw.Name} must be a Text Channel.");
+            else
+            {
+                await ReplyAsync($"{raw.Name} must be a Text Channel.");
+            }
         }
 
         [Command("setlistchannel")]
@@ -287,7 +304,10 @@ namespace Citadel
                 Program.WriteConfig();
                 await ReplyAsync($"Set the List channel to {channel.Name}");
             }
-            else await ReplyAsync($"{raw.Name} must be a Text Channel.");
+            else
+            {
+                await ReplyAsync($"{raw.Name} must be a Text Channel.");
+            }
         }
 
         [Command("setresetmessage")]
@@ -325,9 +345,13 @@ namespace Citadel
         public async Task AddMessageAsync([Remainder] string text)
         {
             if (!text.Contains("{0}"))
+            {
                 await ReplyAsync("Capped message must contain '{0}'!");
+            }
             else if (Program.CappedMessages.Contains(text))
+            {
                 await ReplyAsync($"Capped messages already contains '{text}'.");
+            }
             else
             {
                 Program.CappedMessages.Add(text);
@@ -336,17 +360,33 @@ namespace Citadel
             }
         }
 
+        private string RemoveFormatting(string text)
+        {
+            return Regex.Replace(text, "/[_~`*]", "");
+        }
+
         [Command("removemessage")]
         [RequireMod]
         public async Task RemoveMessageAsync([Remainder] string text)
         {
-            if (!Program.CappedMessages.Contains(text))
+            string result = null;
+            Program.CappedMessages.ForEach((message) =>
+            {
+                if (RemoveFormatting(text) == RemoveFormatting(message))
+                {
+                    result = message;
+                }
+            });
+
+            if (result == null)
+            {
                 await ReplyAsync($"Capped messages does not contain '{text}'.");
+            }
             else
             {
-                Program.CappedMessages.Remove(text);
+                Program.CappedMessages.Remove(result);
                 Program.WriteConfig();
-                await ReplyAsync($"Removed '{text}' from the capped messages.");
+                await ReplyAsync($"Removed '{result}' from the capped messages.");
             }
         }
     }
