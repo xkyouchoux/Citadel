@@ -362,7 +362,7 @@ namespace Citadel
 
         private string RemoveFormatting(string text)
         {
-            return Regex.Replace(text, "/[_~`*]", "");
+            return Regex.Replace(text, "[*_~`]", "");
         }
 
         [Command("removemessage")]

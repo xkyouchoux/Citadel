@@ -285,32 +285,34 @@ namespace Citadel
             if (!Paused && !Updating && eventTime.Minute % 10 == 0)
             {
                 Updating = true;
-                Bot.SetStatusAsync(UserStatus.Idle);
-
-                string[] cappers = Downloader.GetCappersList(Client);
-
-                var message = new StringBuilder();
-
-                foreach (var capper in cappers)
+                try
                 {
-                    if (!CappedList.Contains(capper))
+                    string[] cappers = Downloader.GetCappersList(Client);
+
+                    var message = new StringBuilder();
+
+                    foreach (var capper in cappers)
                     {
-                        CappedList.Add(capper);
-                        if (CappedMessages.Count > 0)
+                        if (!CappedList.Contains(capper))
                         {
-                            message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper) + "\n");
+                            CappedList.Add(capper);
+                            if (CappedMessages.Count > 0)
+                            {
+                                message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper) + "\n");
+                            }
                         }
                     }
-                }
 
-                if (message.Length > 0 && UpdateChannel != 0)
+                    if (message.Length > 0 && UpdateChannel != 0)
+                    {
+                        PostMessageAsync(UpdateChannel, message.ToString()).GetAwaiter().GetResult();
+                    }
+                }
+                catch
                 {
-                    PostMessageAsync(UpdateChannel, message.ToString()).GetAwaiter().GetResult();
                 }
                 CappedList.Sort();
                 WriteCookies();
-
-                Bot.SetStatusAsync(UserStatus.Online);
                 Updating = false;
                 Console.WriteLine(new LogMessage(LogSeverity.Info, "Timer", $"Update finished in {(DateTime.UtcNow - eventTime).TotalMilliseconds}ms."));
             }
