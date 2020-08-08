@@ -188,6 +188,7 @@ namespace Citadel
 
             OnJoin += (name) =>
             {
+                Console.WriteLine($"Caching achievements for [{name}]");
                 Downloader.GetAchievements(Downloader.GetProfiles(Client, new string[] { name }));
             };
 
@@ -195,12 +196,14 @@ namespace Citadel
             {
                 if (File.Exists($"{Directory.GetCurrentDirectory()}/achievements/{name}.json"))
                 {
+                    Console.WriteLine($"Removing achievement cache for [{name}]");
                     File.Delete($"{Directory.GetCurrentDirectory()}/achievements/{name}.json");
                 }
             };
 
             OnNamechange += (prevName, newName) =>
             {
+                Console.WriteLine($"Renaming achievement cache from [{prevName}] to [{newName}]");
                 File.Move($"{Directory.GetCurrentDirectory()}/achievements/{prevName}.json", $"{Directory.GetCurrentDirectory()}/achievements/{newName}.json");
             };
 
@@ -382,6 +385,7 @@ namespace Citadel
             }
             if (!Paused && !Updating && (Force || eventTime.Minute % 10 == 0))
             {
+                Force = false;
                 Updating = true;
                 try
                 {
