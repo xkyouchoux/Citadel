@@ -64,6 +64,8 @@ namespace Citadel
 
         public static volatile bool Paused = false;
 
+        public static bool Force = false;
+
         public static volatile List<string> CappedList;
         public static List<string> CappedMessages = DEFAULT_CAPPED_MESSAGES.ToList();
 
@@ -378,7 +380,7 @@ namespace Citadel
             {
                 Console.WriteLine(e);
             }
-            if (!Paused && !Updating && eventTime.Minute % 10 == 0)
+            if (!Paused && !Updating && (Force || eventTime.Minute % 10 == 0))
             {
                 Updating = true;
                 try
@@ -513,6 +515,7 @@ namespace Citadel
             RSN_PATH = Directory.GetCurrentDirectory() + "/rsn";
             COOKIE_DIRECTORY = $"{Directory.GetCurrentDirectory()}/Log";
             Directory.CreateDirectory(RSN_PATH);
+            Directory.CreateDirectory(COOKIE_DIRECTORY);
             ReadConfig();
             var now = DateTime.UtcNow;
             var date = now;

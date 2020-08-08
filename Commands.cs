@@ -21,6 +21,14 @@ namespace Citadel
             await Task.CompletedTask;
         }
 
+        [Command("force")]
+        [RequireHost]
+        public async Task ForceAsync()
+        {
+            Program.Force = true;
+            await Task.CompletedTask;
+        }
+
         [Command("prefix")]
         [RequireMod]
         public async Task PrefixAsync(char prefix)
