@@ -90,11 +90,11 @@ namespace Citadel
 
         private static string[] achievementStrings = new string[]
         {
-            ":star: **{0}** has achieved **{1}M Total XP!**\n",
+            ":star: **{0}** has achieved **{1} Overall XP!**\n",
             ":star: **{0}** has found **{1}!**\n",
-            ":star: **{0}** has achieved **Level 99 in {1}!**\n",
-            ":star: **{0}** has achieved **Level 120 in {1}!**\n",
-            ":star: **{0}** has achieved **{1}M XP in {2}!**\n"
+            ":star: **{0}** has achieved **99 {1}!**\n",
+            ":star: **{0}** has achieved **120 {1}!**\n",
+            ":star: **{0}** has achieved **{1}M {2} XP!**\n"
         };
 
         public static JObject[] GetProfiles(HttpClient client, string[] members)
@@ -157,11 +157,17 @@ namespace Citadel
                         achievements = JObject.Parse(defaultAchievements);
                     }
                     bool dirty = false;
-                    int total = (int)(profile["totalxp"].ToObject<uint>() / 100000000 * 100000000 / 1000000);
+                    int total = (int)(profile["totalxp"].ToObject<uint>() / 25000000 * 25000000 / 1000000);
                     if(total > achievements["total"].ToObject<int>())
                     {
                         achievements["total"] = total;
-                        result.Add(string.Format(achievementStrings[0], name, total));
+                        var str = total.ToString();
+                        if(str.Length == 4)
+                        {
+                            result.Add(string.Format(achievementStrings[0], name, str.Insert(1, ".") + "B"));
+                        }
+                        else
+                            result.Add(string.Format(achievementStrings[0], name, str+"M"));
                         dirty = true;
                     }
                     var activitiesArrayToken = profile["activities"] as JArray;
