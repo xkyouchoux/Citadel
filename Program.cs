@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
+using Discord.Webhook;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
@@ -37,6 +38,8 @@ namespace Citadel
         public static readonly string RSN_PATH;
         public static readonly string COOKIE_DIRECTORY;
 
+        public static readonly DateTime START_TIME = DateTime.UtcNow;
+
         public static uint CurrentResetDay = DEFAULT_RESET_DAY;
         public static uint CurrentResetHour = DEFAULT_RESET_HOUR;
         public static uint CurrentResetMinute = DEFAULT_RESET_MINUTE;
@@ -70,9 +73,17 @@ namespace Citadel
 
         public static string ResetMessage = DEFAULT_RESET_MESSAGE;
 
+        public static string AchievementWebhookUrl;
+
         private static bool Updating = false;
 
         private static DateTime _next = DateTime.MinValue;
+
+        public static DiscordWebhookClient AchievementWebhook;
+
+        public static event Action<string, string> OnNamechange;
+        public static event Action<string> OnLeave;
+        public static event Action<string> OnJoin;
 
         public static void Main()
         {
@@ -173,6 +184,24 @@ namespace Citadel
 
             await Commands.AddModuleAsync<Commands>(Services);
 
+            OnJoin += (name) =>
+            {
+                Downloader.GetAchievements(Downloader.GetProfiles(Client, new string[] { name }));
+            };
+
+            OnLeave += (name) =>
+            {
+                if (File.Exists($"{Directory.GetCurrentDirectory()}/achievements/{name}.json"))
+                {
+                    File.Delete($"{Directory.GetCurrentDirectory()}/achievements/{name}.json");
+                }
+            };
+
+            OnNamechange += (prevName, newName) =>
+            {
+                File.Move($"{Directory.GetCurrentDirectory()}/achievements/{prevName}.json", $"{Directory.GetCurrentDirectory()}/achievements/{newName}.json");
+            };
+
             _next = Trim(DateTime.UtcNow);
 
             await Task.Run(() =>
@@ -243,6 +272,12 @@ namespace Citadel
                 ResetMessage = json["reset_message"].ToString();
                 Prefix = json["prefix"].ToObject<char>();
                 CappedMessages = json["capped_messages"].ToObject<List<string>>();
+                if (json.ContainsKey("achievement_webhook_url"))
+                {
+                    AchievementWebhookUrl = json["achievement_webhook_url"].ToString();
+                    if(AchievementWebhookUrl != "")
+                        AchievementWebhook = new DiscordWebhookClient(AchievementWebhookUrl);
+                }
             }
         }
 
@@ -270,7 +305,8 @@ namespace Citadel
                 ["list_channel"] = ListChannel,
                 ["reset_message"] = ResetMessage,
                 ["prefix"] = Prefix,
-                ["capped_messages"] = JToken.FromObject(CappedMessages)
+                ["capped_messages"] = JToken.FromObject(CappedMessages),
+                ["achievement_webhook_url"] = AchievementWebhookUrl
             };
             File.WriteAllText(CONFIG_PATH, json.ToString());
         }
@@ -282,12 +318,74 @@ namespace Citadel
 
         private static void TimerElapsed(DateTime eventTime)
         {
+            try
+            {
+                List<Downloader.MemberData> membercache;
+                if (File.Exists($"{Directory.GetCurrentDirectory()}/membercache.csv"))
+                    membercache = Downloader.ParseMemberData(File.ReadAllText($"{Directory.GetCurrentDirectory()}/membercache.csv")).ToList();
+                else
+                    membercache = new List<Downloader.MemberData>();
+                string result = Client.GetStringAsync($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={Downloader.CLAN_NAME}").GetAwaiter().GetResult();
+                if (result != null && result.Length > 0)
+                    File.WriteAllText($"{Directory.GetCurrentDirectory()}/membercache.csv", result);
+                var current = Downloader.ParseMemberData(result).ToList();
+                if(membercache.Count > 0 && current.Count > 0)
+                {
+                    var leave = Downloader.MemberData.Diff(membercache, current);
+                    var join = Downloader.MemberData.Diff(current, membercache);
+                    if (leave.Count > 0 && join.Count == 0)
+                    {
+                        foreach (var leaver in leave)
+                        {
+                            OnLeave?.Invoke(leaver.Name);
+                        }
+                    }
+                    else if (leave.Count == 0 && join.Count > 0)
+                    {
+                        foreach(var joiner in join)
+                        {
+                            OnJoin?.Invoke(joiner.Name);
+                        }
+                    }
+                    else
+                    {
+                        for(int i = join.Count - 1; i >= 0; i--)
+                        {
+                            for(int j = leave.Count - 1; j >= 0; j--)
+                            {
+                                var joiner = join[i];
+                                var leaver = leave[j];
+
+                                if(joiner.Rank == leaver.Rank && joiner.ClanXP == leaver.ClanXP && joiner.ClanKills == leaver.ClanKills)
+                                {
+                                    join.RemoveAt(i);
+                                    leave.RemoveAt(j);
+                                    OnNamechange?.Invoke(leaver.Name, joiner.Name);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (join.Count > 0)
+                            join.ForEach((item) => OnJoin?.Invoke(item.Name));
+                        if (leave.Count > 0)
+                            leave.ForEach((item) => OnLeave?.Invoke(item.Name));
+                    }
+
+                }
+            }
+            catch(Exception e) 
+            {
+                Console.WriteLine(e);
+            }
             if (!Paused && !Updating && eventTime.Minute % 10 == 0)
             {
                 Updating = true;
                 try
                 {
-                    string[] cappers = Downloader.GetCappersList(Client);
+                    var profiles = Downloader.GetProfiles(Client, Downloader.GetClanList(Client));
+
+                    string[] cappers = Downloader.GetCappersList(profiles);
 
                     var message = new StringBuilder();
 
@@ -307,10 +405,33 @@ namespace Citadel
                     {
                         PostMessageAsync(UpdateChannel, message.ToString()).GetAwaiter().GetResult();
                     }
+                    new Thread(() =>
+                    {
+                        string[] achievements = Downloader.GetAchievements(profiles);
+                        if (AchievementWebhook != null)
+                        {
+                            try
+                            {
+                                var builder = new StringBuilder();
+                                foreach (var achievement in achievements)
+                                {
+                                    if (builder.Length + achievement.Length + 1 >= 2000)
+                                    {
+                                        AchievementWebhook.SendMessageAsync(builder.ToString());
+                                        builder.Clear();
+                                    }
+                                    builder.Append(achievement);
+                                }
+                                if (builder.Length > 0)
+                                {
+                                    AchievementWebhook.SendMessageAsync(builder.ToString());
+                                }
+                            }
+                            catch { }
+                        }
+                    }).Start();
                 }
-                catch
-                {
-                }
+                catch { }
                 CappedList.Sort();
                 WriteCookies();
                 Updating = false;

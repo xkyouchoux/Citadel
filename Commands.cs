@@ -31,6 +31,48 @@ namespace Citadel
             await ReplyAsync($"Set prefix to [{prefix}].");
         }
 
+        [Command("webhook")]
+        [RequireMod]
+        public async Task AchievementWebhookAsync([Remainder]string url = "")
+        {
+            Program.AchievementWebhookUrl = url;
+            Program.WriteConfig();
+            if(url == "")
+            {
+                Program.AchievementWebhook = null;
+                await ReplyAsync("Removed the achievement webhook url.");
+            }
+            else
+            {
+                Program.AchievementWebhook = new Discord.Webhook.DiscordWebhookClient(url);
+                await ReplyAsync($"Set the achievement webhook url to {url}");
+            }
+        }
+
+        [Command("uptime")]
+        public async Task UptimeAsync()
+        {
+            var uptime = DateTime.UtcNow - Program.START_TIME;
+            var result = new StringBuilder();
+            if (uptime.Days == 1)
+                result.Append("1 day, ");
+            else
+                result.Append($"{uptime.Days} days, ");
+            if (uptime.Hours == 1)
+                result.Append("1 hour, ");
+            else
+                result.Append($"{uptime.Hours} hours, ");
+            if (uptime.Minutes == 1)
+                result.Append("1 minute, ");
+            else
+                result.Append($"{uptime.Minutes} minutes, ");
+            if (uptime.Seconds == 1)
+                result.Append("1 second");
+            else
+                result.Append($"{uptime.Seconds} seconds");
+            await ReplyAsync($"Current uptime: {result}");
+        }
+
         [Command("permission")]
         [RequireAdmin]
         public async Task PermissionAsync(string text)
