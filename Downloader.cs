@@ -119,6 +119,8 @@ namespace Citadel
             for (int index = 0; index < result.Length; index++)
             {
                 result[index] = JObject.Parse(raw[index]);
+                if (!result[index].ContainsKey("name"))
+                    result[index]["name"] = members[index];
             }
 
             return result;
@@ -138,19 +140,51 @@ namespace Citadel
             return result.ToArray();
         }
 
-        public static string[] GetAchievements(JObject[] profiles)
+        public static string[] GetAchievements(HttpClient client, JObject[] profiles)
         {
             var result = new List<string>();
             Directory.CreateDirectory($"{Directory.GetCurrentDirectory()}/achievements");
             foreach(var profile in profiles)
             {
-                if(NO_ERROR == CheckError(profile))
+                var name = profile["name"].ToString();
+                var code = CheckError(profile);
+                if(code == PROFILE_PRIVATE_CODE)
                 {
-                    var name = profile["name"].ToString();
+                    try
+                    {
+                        using var reader = new StringReader(client.GetStringAsync($"https://secure.runescape.com/m=hiscore/index_lite.ws?player={name}").GetAwaiter().GetResult());
+                        profile["activities"] = new JArray();
+                        var totalLine = reader.ReadLine().Split(",");
+                        profile["totalxp"] = uint.Parse(totalLine[2]);
+                        var skillvalues = (profile["skillvalues"] = new JArray()) as JArray;
+                        var index = 0;
+                        for (string line; (line = reader.ReadLine()) != null;)
+                        {
+                            var split = line.Split(",");
+                            if (split.Length == 3)
+                            {
+                                skillvalues.Add(new JObject
+                                {
+                                    ["level"] = int.Parse(split[1]),
+                                    ["xp"] = int.Parse(split[2]) * 10,
+                                    ["id"] = index
+                                });
+                                index++;
+                            }
+                        }
+                        profile.Remove("error");
+                        code = NO_ERROR;
+                    }
+                    catch { }
+                }
+                if (code == NO_ERROR)
+                {
                     JObject achievements;
+                    bool exists = false;
                     if (File.Exists($"{Directory.GetCurrentDirectory()}/achievements/{name}.json"))
                     {
                         achievements = JObject.Parse(File.ReadAllText($"{Directory.GetCurrentDirectory()}/achievements/{name}.json"));
+                        exists = true;
                     }
                     else
                     {
@@ -162,12 +196,15 @@ namespace Citadel
                     {
                         achievements["total"] = total;
                         var str = total.ToString();
-                        if(str.Length == 4)
+                        if (exists)
                         {
-                            result.Add(string.Format(achievementStrings[0], name, str.Insert(1, ".") + "B"));
+                            if (str.Length == 4)
+                            {
+                                result.Add(string.Format(achievementStrings[0], name, str.Insert(1, ".") + "B"));
+                            }
+                            else
+                                result.Add(string.Format(achievementStrings[0], name, str + "M"));
                         }
-                        else
-                            result.Add(string.Format(achievementStrings[0], name, str+"M"));
                         dirty = true;
                     }
                     var activitiesArrayToken = profile["activities"] as JArray;
@@ -181,7 +218,8 @@ namespace Citadel
                             petText = petText[0..^1];
                             if (!achievements["pets"].ToObject<string[]>().Contains(petText))
                             {
-                                result.Add(string.Format(achievementStrings[1], name, petText));
+                                if(exists)
+                                    result.Add(string.Format(achievementStrings[1], name, petText));
                                 (achievements["pets"] as JArray).Add(petText);
                                 dirty = true;
                             }
@@ -197,13 +235,15 @@ namespace Citadel
                         if(!achArray[id]["99"].ToObject<bool>() && level >= 99)
                         {
                             achArray[id]["99"] = true;
-                            result.Add(string.Format(achievementStrings[2], name, skillNames[id]));
+                            if(exists)
+                                result.Add(string.Format(achievementStrings[2], name, skillNames[id]));
                             dirty = true;
                         }
                         if(!achArray[id]["120"].ToObject<bool>() && (level >= 120 || xp >= level120))
                         {
                             achArray[id]["120"] = true;
-                            result.Add(string.Format(achievementStrings[3], name, skillNames[id]));
+                            if(exists)
+                                result.Add(string.Format(achievementStrings[3], name, skillNames[id]));
                             dirty = true;
                         }
                         var last = achArray[id]["last"].ToObject<int>();
@@ -211,7 +251,8 @@ namespace Citadel
                         if(current > last)
                         {
                             achArray[id]["last"] = current;
-                            result.Add(string.Format(achievementStrings[4], name, current, skillNames[id]));
+                            if(exists)
+                                result.Add(string.Format(achievementStrings[4], name, current, skillNames[id]));
                             dirty = true;
                         }
 

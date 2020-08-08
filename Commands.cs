@@ -53,7 +53,7 @@ namespace Citadel
             else
             {
                 Program.AchievementWebhook = new Discord.Webhook.DiscordWebhookClient(url);
-                await ReplyAsync($"Set the achievement webhook url to {url}");
+                await ReplyAsync("Set the achievement webhook url.");
             }
         }
 

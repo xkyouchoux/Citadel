@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -189,7 +190,7 @@ namespace Citadel
             OnJoin += (name) =>
             {
                 Console.WriteLine($"Caching achievements for [{name}]");
-                Downloader.GetAchievements(Downloader.GetProfiles(Client, new string[] { name }));
+                Downloader.GetAchievements(Client, Downloader.GetProfiles(Client, new string[] { name }));
             };
 
             OnLeave += (name) =>
@@ -413,7 +414,7 @@ namespace Citadel
                     }
                     new Thread(() =>
                     {
-                        string[] achievements = Downloader.GetAchievements(profiles);
+                        string[] achievements = Downloader.GetAchievements(Client, profiles);
                         if (AchievementWebhook != null)
                         {
                             try
