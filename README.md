@@ -1,1 +1,2 @@
-# Citadel
+### Kingdom of Ashdale discord bot
+
