@@ -21,6 +21,15 @@ namespace Citadel
             await Task.CompletedTask;
         }
 
+        [Command("forcecache")]
+        [RequireHost]
+        public async Task ForceCache()
+        {
+            Program.Force = true;
+            Program.Cache = true;
+            await Task.CompletedTask;
+        }
+
         [Command("force")]
         [RequireHost]
         public async Task ForceAsync()

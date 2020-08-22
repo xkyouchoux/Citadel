@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -94,7 +95,8 @@ namespace Citadel
             ":star: **{0}** has found **{1}!**\n",
             ":star: **{0}** has achieved **99 {1}!**\n",
             ":star: **{0}** has achieved **120 {1}!**\n",
-            ":star: **{0}** has achieved **{1}M {2} XP!**\n"
+            ":star: **{0}** has achieved **{1}M {2} XP!**\n",
+            ":star: **{0}** has achieved **{1} Total Level!**\n"
         };
 
         public static JObject[] GetProfiles(HttpClient client, string[] members)
@@ -155,6 +157,7 @@ namespace Citadel
                         using var reader = new StringReader(client.GetStringAsync($"https://secure.runescape.com/m=hiscore/index_lite.ws?player={name}").GetAwaiter().GetResult());
                         profile["activities"] = new JArray();
                         var totalLine = reader.ReadLine().Split(",");
+                        profile["totalskill"] = int.Parse(totalLine[1]);
                         profile["totalxp"] = uint.Parse(totalLine[2]);
                         var skillvalues = (profile["skillvalues"] = new JArray()) as JArray;
                         var index = 0;
@@ -191,8 +194,26 @@ namespace Citadel
                         achievements = JObject.Parse(defaultAchievements);
                     }
                     bool dirty = false;
-                    int total = (int)(profile["totalxp"].ToObject<uint>() / 25000000 * 25000000 / 1000000);
-                    if(total > achievements["total"].ToObject<int>())
+
+                    int totalskill = profile["totalskill"].ToObject<int>() / 100 * 100;
+
+                    if (achievements.ContainsKey("totalskill") && totalskill >= 1000 && totalskill > achievements["totalskill"].ToObject<int>())
+                    {
+                        achievements["totalskill"] = totalskill;
+                        if (exists)
+                        {
+                            result.Add(string.Format(achievementStrings[5], name, totalskill));
+                        }
+                        dirty = true;
+                    }
+                    else
+                    {
+                        achievements["totalskill"] = totalskill;
+                        dirty = true;
+                    }
+
+                    int total = (int)(profile["totalxp"].ToObject<uint>() / 50000000 * 50000000 / 1000000);
+                    if (total > achievements["total"].ToObject<int>())
                     {
                         achievements["total"] = total;
                         var str = total.ToString();
@@ -207,6 +228,7 @@ namespace Citadel
                         }
                         dirty = true;
                     }
+
                     var activitiesArrayToken = profile["activities"] as JArray;
                     foreach(var activityToken in activitiesArrayToken)
                     {
@@ -247,7 +269,7 @@ namespace Citadel
                             dirty = true;
                         }
                         var last = achArray[id]["last"].ToObject<int>();
-                        var current = xp / 10000000 * 10;
+                        var current = xp / 20000000 * 10;
                         if(current > last)
                         {
                             achArray[id]["last"] = current;
@@ -377,6 +399,7 @@ namespace Citadel
             var json = new JObject
             {
                 ["total"] = 0,
+                ["totalskill"] = 0,
                 ["pets"] = new JArray(),
                 ["skills"] = new JArray()
             };

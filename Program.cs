@@ -66,6 +66,7 @@ namespace Citadel
         public static volatile bool Paused = false;
 
         public static bool Force = false;
+        public static bool Cache = false;
 
         public static volatile List<string> CappedList;
         public static List<string> CappedMessages = DEFAULT_CAPPED_MESSAGES.ToList();
@@ -415,7 +416,7 @@ namespace Citadel
                     new Thread(() =>
                     {
                         string[] achievements = Downloader.GetAchievements(Client, profiles);
-                        if (AchievementWebhook != null)
+                        if (AchievementWebhook != null && !Cache)
                         {
                             try
                             {
@@ -436,6 +437,7 @@ namespace Citadel
                             }
                             catch { }
                         }
+                        Cache = false;
                     }).Start();
                 }
                 catch { }
