@@ -91,12 +91,12 @@ namespace Citadel
 
         private static string[] achievementStrings = new string[]
         {
-            ":star: **{0}** has achieved **{1} Overall XP!**\n",
-            ":star: **{0}** has found **{1}!**\n",
-            ":star: **{0}** has achieved **99 {1}!**\n",
-            ":star: **{0}** has achieved **120 {1}!**\n",
-            ":star: **{0}** has achieved **{1}M {2} XP!**\n",
-            ":star: **{0}** has achieved **{1} Total Level!**\n"
+            ":large_orange_diamond: {0} can now join the {1} server!\n",
+            ":dove: {0} found a wild {1}!\n",
+            ":medal: can now wear the {1} cape!\n",
+            ":crown: {0} Nulyf'd 120 in {1}!\n",
+            ":large_blue_diamond: {0} is overcompensating with {1}!\n",
+            ":purple_circle: {0} can now join the {1} server!\n"
         };
 
         public static JObject[] GetProfiles(HttpClient client, string[] members)
@@ -274,7 +274,7 @@ namespace Citadel
                         {
                             achArray[id]["last"] = current;
                             if(exists)
-                                result.Add(string.Format(achievementStrings[4], name, current, skillNames[id]));
+                                result.Add(string.Format(achievementStrings[4], name, $"{current}M in {skillNames[id]}"));
                             dirty = true;
                         }
 
