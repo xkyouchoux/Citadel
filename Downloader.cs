@@ -212,8 +212,8 @@ namespace Citadel
                         dirty = true;
                     }
 
-                    int total = (int)(profile["totalxp"].ToObject<uint>() / 50000000 * 50000000 / 1000000);
-                    if (total > achievements["total"].ToObject<int>())
+                    int total = (int)(profile["totalxp"].ToObject<uint>() / 25000000 * 25000000 / 1000000);
+                    if (total % 50 == 0 && total > achievements["total"].ToObject<int>())
                     {
                         achievements["total"] = total;
                         var str = total.ToString();
@@ -269,8 +269,8 @@ namespace Citadel
                             dirty = true;
                         }
                         var last = achArray[id]["last"].ToObject<int>();
-                        var current = xp / 20000000 * 10;
-                        if(current > last)
+                        var current = xp / 10000000 * 10;
+                        if(current % 20 == 0 && current > last)
                         {
                             achArray[id]["last"] = current;
                             if(exists)
