@@ -295,13 +295,21 @@ namespace Citadel
                 var split = line.Split(",");
                 if (split.Length != 4)
                     continue;
-                result.Add(new MemberData
+                try
                 {
-                    Name = Fix(split[0]),
-                    Rank = split[1],
-                    ClanXP = long.Parse(split[2]),
-                    ClanKills = int.Parse(split[3])
-                });
+
+                    result.Add(new MemberData
+                    {
+                        Name = Fix(split[0]),
+                        Rank = split[1],
+                        ClanXP = long.Parse(split[2]),
+                        ClanKills = int.Parse(split[3])
+                    });
+                }
+                catch(Exception e)
+                {
+                    Console.WriteLine(string.Join(", ", split));
+                }
             }
             return result.ToArray();
         }
