@@ -16,7 +16,7 @@ namespace Citadel
         {
             public string Name;
             public string Rank;
-            public int ClanXP;
+            public long ClanXP;
             public int ClanKills;
 
             public static List<MemberData> Diff(List<MemberData> list1, List<MemberData> list2)
@@ -299,7 +299,7 @@ namespace Citadel
                 {
                     Name = Fix(split[0]),
                     Rank = split[1],
-                    ClanXP = int.Parse(split[2]),
+                    ClanXP = long.Parse(split[2]),
                     ClanKills = int.Parse(split[3])
                 });
             }
