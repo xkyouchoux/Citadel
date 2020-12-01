@@ -58,6 +58,7 @@ namespace Citadel
         public static ulong ResetChannel = 0L;
         public static ulong UpdateChannel = 0L;
         public static ulong ListChannel = 0L;
+        public static ulong ItemChannel = 0L;
 
         public static bool UPDATE_READY = false;
 
@@ -265,20 +266,54 @@ namespace Citadel
             {
                 var json = JObject.Parse(File.ReadAllText(CONFIG_PATH));
                 Permissions.Clear();
-                var permissions = json["permissions"];
-                foreach (var permission in permissions)
+                if(json.ContainsKey("permissions"))
                 {
-                    Permissions[permission["id"].ToObject<ulong>()] = (Permission)permission["value"].ToObject<int>();
+                    var permissions = json["permissions"];
+                    foreach (var permission in permissions)
+                    {
+                        Permissions[permission["id"].ToObject<ulong>()] = (Permission)permission["value"].ToObject<int>();
+                    }
                 }
-                CurrentResetDay = json["reset_day"].ToObject<uint>();
-                CurrentResetHour = json["reset_hour"].ToObject<uint>();
-                CurrentResetMinute = json["reset_minute"].ToObject<uint>();
-                ResetChannel = json["reset_channel"].ToObject<ulong>();
-                UpdateChannel = json["update_channel"].ToObject<ulong>();
-                ListChannel = json["list_channel"].ToObject<ulong>();
-                ResetMessage = json["reset_message"].ToString();
-                Prefix = json["prefix"].ToObject<char>();
-                CappedMessages = json["capped_messages"].ToObject<List<string>>();
+                if(json.ContainsKey("reset_day"))
+                {
+                    CurrentResetDay = json["reset_day"].ToObject<uint>();
+                }
+                if(json.ContainsKey("reset_hour"))
+                {
+                    CurrentResetHour = json["reset_hour"].ToObject<uint>();
+                }
+                if(json.ContainsKey("reset_minute"))
+                {
+                    CurrentResetMinute = json["reset_minute"].ToObject<uint>();
+                }
+                if(json.ContainsKey("reset_channel"))
+                {
+                    ResetChannel = json["reset_channel"].ToObject<ulong>();
+                }
+                if(json.ContainsKey("update_channel"))
+                {
+                    UpdateChannel = json["update_channel"].ToObject<ulong>();
+                }
+                if(json.ContainsKey("list_channel"))
+                {
+                    ListChannel = json["list_channel"].ToObject<ulong>();
+                }
+                if(json.ContainsKey("reset_message"))
+                {
+                    ResetMessage = json["reset_message"].ToString();
+                }
+                if(json.ContainsKey("prefix"))
+                {
+                    Prefix = json["prefix"].ToObject<char>();
+                }
+                if(json.ContainsKey("capped_messages"))
+                {
+                    CappedMessages = json["capped_messages"].ToObject<List<string>>();
+                }
+                if(json.ContainsKey("item_channel"))
+                {
+                    ItemChannel = json["item_channel"].ToObject<ulong>();
+                }
                 if (json.ContainsKey("achievement_webhook_url"))
                 {
                     AchievementWebhookUrl = json["achievement_webhook_url"].ToString();
@@ -310,6 +345,7 @@ namespace Citadel
                 ["reset_channel"] = ResetChannel,
                 ["update_channel"] = UpdateChannel,
                 ["list_channel"] = ListChannel,
+                ["item_channel"] = ItemChannel,
                 ["reset_message"] = ResetMessage,
                 ["prefix"] = Prefix,
                 ["capped_messages"] = JToken.FromObject(CappedMessages),
@@ -415,6 +451,9 @@ namespace Citadel
                     }
                     new Thread(() =>
                     {
+
+                        Downloader.GetItems(Client, profiles);
+                        return;
                         string[] achievements = Downloader.GetAchievements(Client, profiles);
                         if (AchievementWebhook != null && !Cache)
                         {

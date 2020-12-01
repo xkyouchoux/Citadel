@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading.Tasks;
+using NodaTime;
 
 namespace Citadel
 {
@@ -51,7 +52,7 @@ namespace Citadel
 
         public static readonly string CLAN_NAME = "Kingdom of Ashdale";
 
-        private static readonly TimeZoneInfo _timeZone;
+        private static readonly DateTimeZone _timeZone;
 
         private static int level120 = 104273167;
 
@@ -140,6 +141,52 @@ namespace Citadel
                 }
             }
             return result.ToArray();
+        }
+
+        public static string[] GetItems(HttpClient client, JObject[] profiles)
+        {
+            var result = new List<string>();
+            Directory.CreateDirectory($"{Directory.GetCurrentDirectory()}/items");
+            foreach(var profile in profiles)
+            {
+                var name = profile["name"].ToString();
+                var code = CheckError(profile);
+                if(code == NO_ERROR)
+                {
+                    JObject items;
+                    bool exists = false;
+                    if (File.Exists($"{Directory.GetCurrentDirectory()}/items/{name}.json"))
+                    {
+                        items = JObject.Parse(File.ReadAllText($"{Directory.GetCurrentDirectory()}/items/{name}.json"));
+                        exists = true;
+                    }
+                    else
+                    {
+                        items = new JObject();
+                    }
+                    bool dirty = false;
+                    var activitiesArrayToken = profile["activities"] as JArray;
+                    foreach (var activityToken in activitiesArrayToken)
+                    {
+                        var activity = activityToken as JObject;
+                        var text = activity["text"].ToString();
+                        if (text.StartsWith("I found an ") && !text.EndsWith("pet."))
+                        {
+                            var itemText = text.Replace("I found an ", "")[0..^1];
+                            if(items.ContainsKey(itemText))
+                            {
+                                var itemDates = items[itemText] as JArray;
+                                if(itemDates.Count > 0)
+                                {
+                                    var lastDate = itemDates[itemDates.Count - 1];
+                                    Console.WriteLine(lastDate.ToString());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
         }
 
         public static string[] GetAchievements(HttpClient client, JObject[] profiles)
@@ -373,7 +420,8 @@ namespace Citadel
                 var activities = json["activities"] as JArray;
                 foreach (var activity in activities)
                 {
-                    var date = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse(activity["date"].ToString()), _timeZone);
+                    var date = Instant.FromDateTimeUtc(DateTime.Parse(activity["date"].ToString())).InZone(_timeZone).ToDateTimeUtc();
+                    Console.WriteLine(date);
                     if (activity["text"].ToString() == "Capped at my Clan Citadel." && date >= Program.PreviousResetDate)
                     {
                         return CAPPED_CODE;
@@ -402,7 +450,7 @@ namespace Citadel
 
         static Downloader()
         {
-            _timeZone = TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time");
+            var dateTime = DateTimeZoneProviders.Tzdb.GetZoneOrNull("Etc/GMT");
 
             var json = new JObject
             {

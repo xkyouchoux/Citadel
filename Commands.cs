@@ -369,6 +369,28 @@ namespace Citadel
             }
         }
 
+        [Command("setitemchannel")]
+        [RequireMod]
+        public async Task SetItemChannelAsync(IGuildChannel raw = null)
+        {
+            if (raw == null)
+            {
+                Program.ItemChannel = 0;
+                Program.WriteConfig();
+                await ReplyAsync("Removed the item channel.");
+            }
+            else if (raw is ITextChannel channel)
+            {
+                Program.ItemChannel = channel.Id;
+                Program.WriteConfig();
+                await ReplyAsync($"Set the Item channel to {channel.Name}");
+            }
+            else
+            {
+                await ReplyAsync($"{raw.Name} must be a Text Channel.");
+            }
+        }
+
         [Command("setresetmessage")]
         [RequireMod]
         public async Task SetResetCommandAsync([Remainder] string message)
