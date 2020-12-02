@@ -34,6 +34,7 @@ namespace Citadel
 
         public static readonly string DEFAULT_RESET_MESSAGE = "<@&206234654091509760> :star: **Citadel has reset!** :european_castle:";
         public static readonly string[] DEFAULT_CAPPED_MESSAGES = new string[] { "**{0}** has capped!" };
+        public static readonly string DEFAULT_ITEM_FOUND_MESSAGE = "**{0}** has found **{1}**!\n";
 
         public static readonly string CONFIG_PATH;
         public static readonly string RSN_PATH;
@@ -208,6 +209,8 @@ namespace Citadel
             {
                 Console.WriteLine($"Renaming achievement cache from [{prevName}] to [{newName}]");
                 File.Move($"{Directory.GetCurrentDirectory()}/achievements/{prevName}.json", $"{Directory.GetCurrentDirectory()}/achievements/{newName}.json");
+                Console.WriteLine($"Renaming item cache from [{prevName}] to [{newName}]");
+                File.Move($"{Directory.GetCurrentDirectory()}/items/{prevName}.json", $"{Directory.GetCurrentDirectory()}/items/{newName}.json");
             };
 
             _next = Trim(DateTime.UtcNow);
@@ -221,7 +224,7 @@ namespace Citadel
                         var currentTime = Trim(DateTime.UtcNow);
                         if (currentTime >= _next)
                         {
-                            TimerElapsed(currentTime);
+                            TimerElapsed();
                             _next = currentTime.AddMinutes(1);
                         }
                         Thread.Sleep(1);
@@ -245,7 +248,7 @@ namespace Citadel
             Process.GetCurrentProcess().Kill();
         }
 
-        private static DateTime Trim(DateTime time)
+        public static DateTime Trim(DateTime time)
         {
             return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0, DateTimeKind.Utc);
         }
@@ -359,8 +362,9 @@ namespace Citadel
             File.WriteAllText(CookiesPath, new JArray(CappedList.ToArray()).ToString());
         }
 
-        private static void TimerElapsed(DateTime eventTime)
+        public static void TimerElapsed()
         {
+            var eventTime = Trim(DateTime.UtcNow);
             try
             {
                 List<Downloader.MemberData> membercache;
@@ -452,8 +456,28 @@ namespace Citadel
                     new Thread(() =>
                     {
 
-                        Downloader.GetItems(Client, profiles);
-                        return;
+                        string[] items = Downloader.GetItems(Client, profiles);
+                        if(ItemChannel > 0)
+                        {
+                            try
+                            {
+                                var builder = new StringBuilder();
+                                foreach (var item in items)
+                                {
+                                    if (builder.Length + item.Length + 1 >= 2000)
+                                    {
+                                        PostMessageAsync(ItemChannel, builder.ToString()).GetAwaiter().GetResult();
+                                        builder.Clear();
+                                    }
+                                    builder.Append(item);
+                                }
+                                if (builder.Length > 0)
+                                {
+                                    PostMessageAsync(ItemChannel, builder.ToString()).GetAwaiter().GetResult();
+                                }
+                            }
+                            catch { }
+                        }
                         string[] achievements = Downloader.GetAchievements(Client, profiles);
                         if (AchievementWebhook != null && !Cache)
                         {
@@ -479,7 +503,7 @@ namespace Citadel
                         Cache = false;
                     }).Start();
                 }
-                catch { }
+                catch (Exception e) { Console.WriteLine(e.Message); }
                 CappedList.Sort();
                 WriteCookies();
                 Updating = false;

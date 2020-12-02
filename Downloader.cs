@@ -170,23 +170,45 @@ namespace Citadel
                     {
                         var activity = activityToken as JObject;
                         var text = activity["text"].ToString();
-                        if (text.StartsWith("I found an ") && !text.EndsWith("pet."))
+                        if (text.StartsWith("I found ") && !text.EndsWith("pet."))
                         {
-                            var itemText = text.Replace("I found an ", "")[0..^1];
+                            var itemText = text.Replace("I found ", "");
+                            if(itemText.EndsWith('.'))
+                            {
+                                itemText = itemText[0..^1];
+                            }
+                            var date = ConvertDateStringToTime(activity["date"].ToString());
                             if(items.ContainsKey(itemText))
                             {
-                                var itemDates = items[itemText] as JArray;
-                                if(itemDates.Count > 0)
+                                var array = items[itemText] as JArray;
+                                var list = array.ToObject<List<string>>();
+                                if (!list.Contains(date.ToString()))
                                 {
-                                    var lastDate = itemDates[itemDates.Count - 1];
-                                    Console.WriteLine(lastDate.ToString());
+                                    array.Add(date.ToString());
+                                    list.Add(date.ToString());
+                                    if(exists)
+                                        result.Add(string.Format(Program.DEFAULT_ITEM_FOUND_MESSAGE, name, itemText));
+                                    dirty = true;
                                 }
+                            }
+                            else
+                            {
+                                var array = new JArray();
+                                array.Add(date.ToString());
+                                if(exists)
+                                    result.Add(string.Format(Program.DEFAULT_ITEM_FOUND_MESSAGE, name, itemText));
+                                dirty = true;
+                                items[itemText] = array;
                             }
                         }
                     }
+                    if(dirty)
+                    {
+                        File.WriteAllText($"{Directory.GetCurrentDirectory()}/items/{name}.json", items.ToString());
+                    }
                 }
             }
-            return null;
+            return result.ToArray();
         }
 
         public static string[] GetAchievements(HttpClient client, JObject[] profiles)
@@ -411,6 +433,11 @@ namespace Citadel
             }
         }
 
+        private static DateTime ConvertDateStringToTime(string str)
+        {
+            return _timeZone.AtStrictly(LocalDateTime.FromDateTime(DateTime.Parse(str))).ToDateTimeUtc();
+        }
+
         public static int CheckFeed(JObject json)
         {
             var code = CheckError(json);
@@ -420,9 +447,8 @@ namespace Citadel
                 var activities = json["activities"] as JArray;
                 foreach (var activity in activities)
                 {
-                    var date = Instant.FromDateTimeUtc(DateTime.Parse(activity["date"].ToString())).InZone(_timeZone).ToDateTimeUtc();
-                    Console.WriteLine(date);
-                    if (activity["text"].ToString() == "Capped at my Clan Citadel." && date >= Program.PreviousResetDate)
+                    var dateTime = ConvertDateStringToTime(activity["date"].ToString());
+                    if (activity["text"].ToString() == "Capped at my Clan Citadel." && dateTime >= Program.PreviousResetDate)
                     {
                         return CAPPED_CODE;
                     }
@@ -450,7 +476,7 @@ namespace Citadel
 
         static Downloader()
         {
-            var dateTime = DateTimeZoneProviders.Tzdb.GetZoneOrNull("Etc/GMT");
+            _timeZone = DateTimeZoneProviders.Tzdb.GetZoneOrNull("Etc/GMT");
 
             var json = new JObject
             {

@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Citadel
@@ -35,6 +36,7 @@ namespace Citadel
         public async Task ForceAsync()
         {
             Program.Force = true;
+            new Thread(Program.TimerElapsed).Start();
             await Task.CompletedTask;
         }
 
