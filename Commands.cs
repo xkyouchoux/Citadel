@@ -236,6 +236,32 @@ namespace Citadel
             await ReplyAsync($"Cleared item blacklist.");
         }
 
+        [Command("listitemblacklist")]
+        [RequireMod]
+        public async Task ListItemBlacklist()
+        {
+            try
+            {
+                await ReplyAsync("__**Item keywords blacklisted**__");
+                var builder = new StringBuilder();
+                foreach (var item in Program.ItemBlacklist)
+                {
+                    if (builder.Length + item.Length + 1 >= 2000)
+                    {
+                        await ReplyAsync(builder.ToString());
+                        builder.Clear();
+                    }
+                    builder.Append(item);
+                }
+                if (builder.Length > 0)
+                {
+                    await ReplyAsync(builder.ToString());
+                }
+            }
+            catch { }
+            await Task.CompletedTask;
+        }
+
         [Command("list")]
         [RequireMod]
         public async Task ListAsync([Remainder] string date = null)
