@@ -337,7 +337,7 @@ namespace Citadel
                 }
                 if(json.ContainsKey("item_blacklist"))
                 {
-                    ItemBlacklist = json["item_blocklist"].ToObject<List<string>>();
+                    ItemBlacklist = json["item_blacklist"].ToObject<List<string>>();
                 }
             }
         }
