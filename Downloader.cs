@@ -186,7 +186,7 @@ namespace Citadel
                                 {
                                     array.Add(date.ToString());
                                     list.Add(date.ToString());
-                                    if(exists)
+                                    if(exists && Program.CheckItemBlacklist(itemText))
                                         result.Add(string.Format(Program.DEFAULT_ITEM_FOUND_MESSAGE, name, itemText));
                                     dirty = true;
                                 }
@@ -195,7 +195,7 @@ namespace Citadel
                             {
                                 var array = new JArray();
                                 array.Add(date.ToString());
-                                if(exists)
+                                if(exists && Program.CheckItemBlacklist(itemText))
                                     result.Add(string.Format(Program.DEFAULT_ITEM_FOUND_MESSAGE, name, itemText));
                                 dirty = true;
                                 items[itemText] = array;

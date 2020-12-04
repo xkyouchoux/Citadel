@@ -209,6 +209,33 @@ namespace Citadel
             await Context.User.SendMessageAsync($"**__Available Commands__**\n{result}");
         }
 
+        [Command("additemblacklist")]
+        [RequireMod]
+        public async Task AddItemBlacklistAsync([Remainder] string text)
+        {
+            Program.ItemBlacklist.Add(text);
+            Program.WriteConfig();
+            await ReplyAsync($"Added {text} to item blacklist.");
+        }
+
+        [Command("removeitemblacklist")]
+        [RequireMod]
+        public async Task RemoveItemBlacklistAsync([Remainder] string text)
+        {
+            Program.ItemBlacklist.Remove(text);
+            Program.WriteConfig();
+            await ReplyAsync($"Removed {text} to item blacklist.");
+        }
+
+        [Command("clearitemblacklist")]
+        [RequireMod]
+        public async Task ClearItemBlacklistAsync()
+        {
+            Program.ItemBlacklist.Clear();
+            Program.WriteConfig();
+            await ReplyAsync($"Cleared item blacklist.");
+        }
+
         [Command("list")]
         [RequireMod]
         public async Task ListAsync([Remainder] string date = null)

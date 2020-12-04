@@ -91,6 +91,8 @@ namespace Citadel
         public static event Action<string> OnLeave;
         public static event Action<string> OnJoin;
 
+        public static List<string> ItemBlacklist = new List<string>();
+
         public static void Main()
         {
             MainAsync().GetAwaiter().GetResult();
@@ -248,6 +250,16 @@ namespace Citadel
             Process.GetCurrentProcess().Kill();
         }
 
+        public static bool CheckItemBlacklist(string text)
+        {
+            foreach(var item in ItemBlacklist)
+            {
+                if (text.Contains(item))
+                    return false;
+            }
+            return true;
+        }
+
         public static DateTime Trim(DateTime time)
         {
             return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0, DateTimeKind.Utc);
@@ -323,6 +335,10 @@ namespace Citadel
                     if(AchievementWebhookUrl != "")
                         AchievementWebhook = new DiscordWebhookClient(AchievementWebhookUrl);
                 }
+                if(json.ContainsKey("item_blacklist"))
+                {
+                    ItemBlacklist = json["item_blocklist"].ToObject<List<string>>();
+                }
             }
         }
 
@@ -352,7 +368,8 @@ namespace Citadel
                 ["reset_message"] = ResetMessage,
                 ["prefix"] = Prefix,
                 ["capped_messages"] = JToken.FromObject(CappedMessages),
-                ["achievement_webhook_url"] = AchievementWebhookUrl
+                ["achievement_webhook_url"] = AchievementWebhookUrl,
+                ["item_blacklist"] = JToken.FromObject(ItemBlacklist)
             };
             File.WriteAllText(CONFIG_PATH, json.ToString());
         }
