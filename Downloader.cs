@@ -375,7 +375,7 @@ namespace Citadel
                         ClanKills = int.Parse(split[3])
                     });
                 }
-                catch(Exception e)
+                catch
                 {
                     Console.WriteLine(string.Join(", ", split));
                 }

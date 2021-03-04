@@ -390,6 +390,7 @@ namespace Citadel
                 else
                     membercache = new List<Downloader.MemberData>();
                 string result = Client.GetStringAsync($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={Downloader.CLAN_NAME}").GetAwaiter().GetResult();
+                if (result != null && !result.StartsWith("Clanmate")) return;
                 if (result != null && result.Length > 0)
                     File.WriteAllText($"{Directory.GetCurrentDirectory()}/membercache.csv", result);
                 var current = Downloader.ParseMemberData(result).ToList();
