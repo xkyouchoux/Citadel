@@ -11,6 +11,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,9 +95,9 @@ namespace Citadel
 
         public static List<string> ItemBlacklist = new List<string>();
 
-        public static void Main()
+        public static async Task Main()
         {
-            MainAsync().GetAwaiter().GetResult();
+            await MainAsync();
         }
 
         public static bool CappedListContains(string name)
@@ -127,9 +129,12 @@ namespace Citadel
 
         public static async Task MainAsync()
         {
-            if (File.Exists($"{Directory.GetCurrentDirectory()}/Citadel-old.exe"))
+            var app_name = GetAppName();
+            var old_name = app_name + ".old";
+
+            if (File.Exists($"{Directory.GetCurrentDirectory()}/{old_name}"))
             {
-                File.Delete($"{Directory.GetCurrentDirectory()}/Citadel-old.exe");
+                File.Delete($"{Directory.GetCurrentDirectory()}/{old_name}");
             }
 
             Services = GetServices();
@@ -240,14 +245,21 @@ namespace Citadel
 
             await Bot.StopAsync();
 
-            var bytes = await Client.GetByteArrayAsync(Environment.GetEnvironmentVariable("citadel-bot-url"));
+            if(UPDATE_READY)
+            {
+#if DEBUG
+                var bytes = await File.ReadAllBytesAsync($"{Directory.GetCurrentDirectory()}/{app_name}.update");
+#else
+                var bytes = await Client.GetByteArrayAsync(Environment.GetEnvironmentVariable("citadel-bot-url"));
+#endif
 
-            File.Move($"{Directory.GetCurrentDirectory()}/Citadel.exe", $"{Directory.GetCurrentDirectory()}/Citadel-old.exe");
-            File.WriteAllBytes($"{Directory.GetCurrentDirectory()}/Citadel.exe", bytes);
+                File.Move($"{Directory.GetCurrentDirectory()}/{app_name}", $"{Directory.GetCurrentDirectory()}/{old_name}");
+                File.WriteAllBytes($"{Directory.GetCurrentDirectory()}/{app_name}", bytes);
 
-            Process.Start($"{Directory.GetCurrentDirectory()}/run.bat");
+                Process.Start($"{Directory.GetCurrentDirectory()}/{app_name}");
 
-            Process.GetCurrentProcess().Kill();
+                Process.GetCurrentProcess().Kill();
+            }
         }
 
         public static bool CheckItemBlacklist(string text)
@@ -592,6 +604,18 @@ namespace Citadel
             {
                 return $"{COOKIE_DIRECTORY}/{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json";
             }
+        }
+
+        private static string GetAppName()
+        {
+            var name = Assembly.GetEntryAssembly().GetName().Name;
+
+            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return name + ".exe";
+            }
+
+            return name;
         }
 
         static Program()
