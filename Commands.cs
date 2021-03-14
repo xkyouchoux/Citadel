@@ -14,11 +14,11 @@ namespace Citadel
 {
     public class Commands : ModuleBase<SocketCommandContext>
     {
-        [Command("update")]
+        [Command("shutdown")]
         [RequireHost]
         public async Task UpdateAsync()
         {
-            Program.UPDATE_READY = true;
+            Program.SHUTDOWN = true;
             await Task.CompletedTask;
         }
 

@@ -63,7 +63,7 @@ namespace Citadel
         public static ulong ListChannel = 0L;
         public static ulong ItemChannel = 0L;
 
-        public static bool UPDATE_READY = false;
+        public static bool SHUTDOWN = false;
 
         public static ulong Host = 0L;
 
@@ -129,14 +129,6 @@ namespace Citadel
 
         public static async Task MainAsync()
         {
-            var app_name = GetAppName();
-            var old_name = app_name + ".old";
-
-            if (File.Exists($"{Directory.GetCurrentDirectory()}/{old_name}"))
-            {
-                File.Delete($"{Directory.GetCurrentDirectory()}/{old_name}");
-            }
-
             Services = GetServices();
             string token = Environment.GetEnvironmentVariable("CITADEL_BOT_TOKEN");
             Host = ulong.Parse(Environment.GetEnvironmentVariable("CITADEL_BOT_HOST"));
@@ -224,7 +216,7 @@ namespace Citadel
 
             await Task.Run(() =>
             {
-                while (!UPDATE_READY)
+                while (!SHUTDOWN)
                 {
                     try
                     {
@@ -244,18 +236,6 @@ namespace Citadel
             });
 
             await Bot.StopAsync();
-
-            if(UPDATE_READY)
-            {
-                var bytes = await Client.GetByteArrayAsync(Environment.GetEnvironmentVariable("CITADEL_BOT_UPDATE_URL"));
-
-                File.Move($"{Directory.GetCurrentDirectory()}/{app_name}", $"{Directory.GetCurrentDirectory()}/{old_name}");
-                File.WriteAllBytes($"{Directory.GetCurrentDirectory()}/{app_name}", bytes);
-
-                Process.Start($"{Directory.GetCurrentDirectory()}/{app_name}");
-
-                Process.GetCurrentProcess().Kill();
-            }
         }
 
         public static bool CheckItemBlacklist(string text)
