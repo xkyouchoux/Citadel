@@ -42,6 +42,8 @@ namespace Citadel
         public static readonly string RSN_PATH;
         public static readonly string COOKIE_DIRECTORY;
 
+        public static readonly string BASE_DIR;
+
         public static readonly DateTime START_TIME = DateTime.UtcNow;
 
         public static uint CurrentResetDay = DEFAULT_RESET_DAY;
@@ -197,19 +199,19 @@ namespace Citadel
 
             OnLeave += (name) =>
             {
-                if (File.Exists($"{Directory.GetCurrentDirectory()}/achievements/{name}.json"))
+                if (File.Exists($"{BASE_DIR}/achievements/{name}.json"))
                 {
                     Console.WriteLine($"Removing achievement cache for [{name}]");
-                    File.Delete($"{Directory.GetCurrentDirectory()}/achievements/{name}.json");
+                    File.Delete($"{BASE_DIR}/achievements/{name}.json");
                 }
             };
 
             OnNamechange += (prevName, newName) =>
             {
                 Console.WriteLine($"Renaming achievement cache from [{prevName}] to [{newName}]");
-                File.Move($"{Directory.GetCurrentDirectory()}/achievements/{prevName}.json", $"{Directory.GetCurrentDirectory()}/achievements/{newName}.json");
+                File.Move($"{BASE_DIR}/achievements/{prevName}.json", $"{BASE_DIR}/achievements/{newName}.json");
                 Console.WriteLine($"Renaming item cache from [{prevName}] to [{newName}]");
-                File.Move($"{Directory.GetCurrentDirectory()}/items/{prevName}.json", $"{Directory.GetCurrentDirectory()}/items/{newName}.json");
+                File.Move($"{BASE_DIR}/items/{prevName}.json", $"{BASE_DIR}/items/{newName}.json");
             };
 
             _next = Trim(DateTime.UtcNow);
@@ -373,14 +375,14 @@ namespace Citadel
             try
             {
                 List<Downloader.MemberData> membercache;
-                if (File.Exists($"{Directory.GetCurrentDirectory()}/membercache.csv"))
-                    membercache = Downloader.ParseMemberData(File.ReadAllText($"{Directory.GetCurrentDirectory()}/membercache.csv")).ToList();
+                if (File.Exists($"{BASE_DIR}/membercache.csv"))
+                    membercache = Downloader.ParseMemberData(File.ReadAllText($"{BASE_DIR}/membercache.csv")).ToList();
                 else
                     membercache = new List<Downloader.MemberData>();
                 string result = Client.GetStringAsync($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={Downloader.CLAN_NAME}").GetAwaiter().GetResult();
                 if (result != null && !result.StartsWith("Clanmate")) return;
                 if (result != null && result.Length > 0)
-                    File.WriteAllText($"{Directory.GetCurrentDirectory()}/membercache.csv", result);
+                    File.WriteAllText($"{BASE_DIR}/membercache.csv", result);
                 var current = Downloader.ParseMemberData(result).ToList();
                 if(membercache.Count > 0 && current.Count > 0)
                 {
@@ -578,30 +580,19 @@ namespace Citadel
         {
             get
             {
-                return $"{COOKIE_DIRECTORY}/{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json";
+                return Path.Combine(COOKIE_DIRECTORY, $"{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json");
             }
-        }
-
-        private static string GetAppName()
-        {
-            var name = Assembly.GetEntryAssembly().GetName().Name;
-
-            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return name + ".exe";
-            }
-
-            return name;
         }
 
         static Program()
         {
+            BASE_DIR = AppContext.BaseDirectory;
             CappedList = new List<string>();
             Permissions = new Dictionary<ulong, Permission>();
             RSNames = new Dictionary<ulong, string>();
-            CONFIG_PATH = Directory.GetCurrentDirectory() + "/config.json";
-            RSN_PATH = Directory.GetCurrentDirectory() + "/rsn";
-            COOKIE_DIRECTORY = $"{Directory.GetCurrentDirectory()}/Log";
+            CONFIG_PATH = Path.Combine(BASE_DIR, "config.json");
+            RSN_PATH = Path.Combine(BASE_DIR, "rsn");
+            COOKIE_DIRECTORY = Path.Combine(BASE_DIR, "Log");
             Directory.CreateDirectory(RSN_PATH);
             Directory.CreateDirectory(COOKIE_DIRECTORY);
             ReadConfig();

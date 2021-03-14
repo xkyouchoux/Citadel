@@ -146,7 +146,7 @@ namespace Citadel
         public static string[] GetItems(HttpClient client, JObject[] profiles)
         {
             var result = new List<string>();
-            Directory.CreateDirectory($"{Directory.GetCurrentDirectory()}/items");
+            Directory.CreateDirectory($"{Program.BASE_DIR}/items");
             foreach(var profile in profiles)
             {
                 var name = profile["name"].ToString();
@@ -155,9 +155,9 @@ namespace Citadel
                 {
                     JObject items;
                     bool exists = false;
-                    if (File.Exists($"{Directory.GetCurrentDirectory()}/items/{name}.json"))
+                    if (File.Exists($"{Program.BASE_DIR}/items/{name}.json"))
                     {
-                        items = JObject.Parse(File.ReadAllText($"{Directory.GetCurrentDirectory()}/items/{name}.json"));
+                        items = JObject.Parse(File.ReadAllText($"{Program.BASE_DIR}/items/{name}.json"));
                         exists = true;
                     }
                     else
@@ -204,7 +204,7 @@ namespace Citadel
                     }
                     if(dirty)
                     {
-                        File.WriteAllText($"{Directory.GetCurrentDirectory()}/items/{name}.json", items.ToString());
+                        File.WriteAllText($"{Program.BASE_DIR}/items/{name}.json", items.ToString());
                     }
                 }
             }
@@ -214,7 +214,7 @@ namespace Citadel
         public static string[] GetAchievements(HttpClient client, JObject[] profiles)
         {
             var result = new List<string>();
-            Directory.CreateDirectory($"{Directory.GetCurrentDirectory()}/achievements");
+            Directory.CreateDirectory($"{Program.BASE_DIR}/achievements");
             foreach(var profile in profiles)
             {
                 var name = profile["name"].ToString();
@@ -253,9 +253,9 @@ namespace Citadel
                 {
                     JObject achievements;
                     bool exists = false;
-                    if (File.Exists($"{Directory.GetCurrentDirectory()}/achievements/{name}.json"))
+                    if (File.Exists($"{Program.BASE_DIR}/achievements/{name}.json"))
                     {
-                        achievements = JObject.Parse(File.ReadAllText($"{Directory.GetCurrentDirectory()}/achievements/{name}.json"));
+                        achievements = JObject.Parse(File.ReadAllText($"{Program.BASE_DIR}/achievements/{name}.json"));
                         exists = true;
                     }
                     else
@@ -349,7 +349,7 @@ namespace Citadel
 
                     }
                     if (dirty)
-                        File.WriteAllText($"{Directory.GetCurrentDirectory()}/achievements/{name}.json", achievements.ToString());
+                        File.WriteAllText($"{Program.BASE_DIR}/achievements/{name}.json", achievements.ToString());
                 }
             }
             return result.ToArray();
