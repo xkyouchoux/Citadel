@@ -138,8 +138,8 @@ namespace Citadel
             }
 
             Services = GetServices();
-            string token = Environment.GetEnvironmentVariable("citadel-bot-token");
-            Host = ulong.Parse(Environment.GetEnvironmentVariable("citadel-bot-host"));
+            string token = Environment.GetEnvironmentVariable("CITADEL_BOT_TOKEN");
+            Host = ulong.Parse(Environment.GetEnvironmentVariable("CITADEL_BOT_HOST"));
             if (token == null || token.Length == 0)
             {
                 Console.WriteLine("Invalid bot token, please set the token environtment variable 'citadel-bot-token' to a valid token.");
@@ -247,11 +247,7 @@ namespace Citadel
 
             if(UPDATE_READY)
             {
-#if DEBUG
-                var bytes = await File.ReadAllBytesAsync($"{Directory.GetCurrentDirectory()}/{app_name}.update");
-#else
-                var bytes = await Client.GetByteArrayAsync(Environment.GetEnvironmentVariable("citadel-bot-url"));
-#endif
+                var bytes = await Client.GetByteArrayAsync(Environment.GetEnvironmentVariable("CITADEL_BOT_UPDATE_URL"));
 
                 File.Move($"{Directory.GetCurrentDirectory()}/{app_name}", $"{Directory.GetCurrentDirectory()}/{old_name}");
                 File.WriteAllBytes($"{Directory.GetCurrentDirectory()}/{app_name}", bytes);
