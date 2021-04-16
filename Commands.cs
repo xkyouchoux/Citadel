@@ -14,6 +14,13 @@ namespace Citadel
 {
     public class Commands : ModuleBase<SocketCommandContext>
     {
+        [Command("ip")]
+        [RequireHost]
+        public async Task Ip()
+        {
+            await Context.User.SendMessageAsync(await Program.Client.GetStringAsync("http://ipinfo.io/ip"));
+        }
+        
         [Command("shutdown")]
         [RequireHost]
         public async Task UpdateAsync()

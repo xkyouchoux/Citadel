@@ -132,9 +132,10 @@ namespace Citadel
         public static async Task MainAsync()
         {
             Services = GetServices();
-            string token = Environment.GetEnvironmentVariable("CITADEL_BOT_TOKEN");
-            Host = ulong.Parse(Environment.GetEnvironmentVariable("CITADEL_BOT_HOST"));
-            if (token == null || token.Length == 0)
+            var token = Environment.GetEnvironmentVariable("CITADEL_BOT_TOKEN");
+            var host = Environment.GetEnvironmentVariable("CITADEL_BOT_HOST");
+            Host = host == null ? 0 : ulong.Parse(host);
+            if (string.IsNullOrEmpty(token))
             {
                 Console.WriteLine("Invalid bot token, please set the token environtment variable 'citadel-bot-token' to a valid token.");
                 return;
