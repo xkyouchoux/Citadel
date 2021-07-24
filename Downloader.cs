@@ -264,7 +264,7 @@ namespace Citadel
                     }
                     bool dirty = false;
 
-                    int totalskill = profile["totalskill"].ToObject<int>() / 100 * 100;
+                    int totalskill = profile["totalskill"].ToObject<int>() / 500 * 500;
 
                     if (achievements.ContainsKey("totalskill") && totalskill >= 1000 && totalskill > achievements["totalskill"].ToObject<int>())
                     {
@@ -282,7 +282,7 @@ namespace Citadel
                     }
 
                     int total = (int)(profile["totalxp"].ToObject<uint>() / 25000000 * 25000000 / 1000000);
-                    if (total % 50 == 0 && total > achievements["total"].ToObject<int>())
+                    if (total % 100 == 0 && total > achievements["total"].ToObject<int>())
                     {
                         achievements["total"] = total;
                         var str = total.ToString();
@@ -339,7 +339,7 @@ namespace Citadel
                         }
                         var last = achArray[id]["last"].ToObject<int>();
                         var current = xp / 10000000 * 10;
-                        if(current % 20 == 0 && current > last)
+                        if(current % 50 == 0 && current > last)
                         {
                             achArray[id]["last"] = current;
                             if(exists)
