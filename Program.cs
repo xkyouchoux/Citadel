@@ -65,14 +65,14 @@ namespace Citadel
         public static ulong ListChannel = 0L;
         public static ulong ItemChannel = 0L;
 
-        public static bool SHUTDOWN = false;
+        public static volatile bool Shutdown = false;
 
         public static ulong Host = 0L;
 
         public static volatile bool Paused = false;
 
-        public static bool Force = false;
-        public static bool Cache = false;
+        public static volatile bool Force = false;
+        public static volatile bool Cache = false;
 
         public static volatile List<string> CappedList;
         public static List<string> CappedMessages = DEFAULT_CAPPED_MESSAGES.ToList();
@@ -85,7 +85,7 @@ namespace Citadel
 
         public static string AchievementWebhookUrl;
 
-        private static bool Updating = false;
+        private static volatile bool Updating = false;
 
         private static DateTime _next = DateTime.MinValue;
 
@@ -111,7 +111,7 @@ namespace Citadel
 
             foreach (var rsn in CappedList)
             {
-                if (rsn.ToLower() == name.ToLower())
+                if (rsn.ToLower().Equals(name.ToLower()))
                 {
                     return true;
                 }
@@ -217,27 +217,24 @@ namespace Citadel
 
             _next = Trim(DateTime.UtcNow);
 
-            await Task.Run(() =>
+            while (!Shutdown)
             {
-                while (!SHUTDOWN)
+                try
                 {
-                    try
+                    var currentTime = Trim(DateTime.UtcNow);
+                    if (currentTime >= _next)
                     {
-                        var currentTime = Trim(DateTime.UtcNow);
-                        if (currentTime >= _next)
-                        {
-                            TimerElapsed();
-                            _next = currentTime.AddMinutes(1);
-                        }
-                        Thread.Sleep(1);
+                        TimerElapsed();
+                        _next = currentTime.AddMinutes(1);
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                    }
+                    Thread.Sleep(1);
                 }
-            });
-
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }
+            Console.WriteLine("Shutting down bot.");
             await Bot.StopAsync();
         }
 
@@ -380,9 +377,9 @@ namespace Citadel
                     membercache = Downloader.ParseMemberData(File.ReadAllText($"{BASE_DIR}/membercache.csv")).ToList();
                 else
                     membercache = new List<Downloader.MemberData>();
-                string result = Client.GetStringAsync($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={Downloader.CLAN_NAME}").GetAwaiter().GetResult();
-                if (result != null && !result.StartsWith("Clanmate")) return;
-                if (result != null && result.Length > 0)
+                var result = Client.GetStringAsync($"http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName={Downloader.CLAN_NAME}").GetAwaiter().GetResult();
+                if (!result.StartsWith("Clanmate")) return;
+                if (result.Length > 0)
                     File.WriteAllText($"{BASE_DIR}/membercache.csv", result);
                 var current = Downloader.ParseMemberData(result).ToList();
                 if(membercache.Count > 0 && current.Count > 0)
@@ -405,9 +402,9 @@ namespace Citadel
                     }
                     else
                     {
-                        for(int i = join.Count - 1; i >= 0; i--)
+                        for(var i = join.Count - 1; i >= 0; i--)
                         {
-                            for(int j = leave.Count - 1; j >= 0; j--)
+                            for(var j = leave.Count - 1; j >= 0; j--)
                             {
                                 var joiner = join[i];
                                 var leaver = leave[j];
@@ -442,19 +439,17 @@ namespace Citadel
                 {
                     var profiles = Downloader.GetProfiles(Client, Downloader.GetClanList(Client));
 
-                    string[] cappers = Downloader.GetCappersList(profiles);
+                    var cappers = Downloader.GetCappersList(profiles);
 
                     var message = new StringBuilder();
 
                     foreach (var capper in cappers)
                     {
-                        if (!CappedList.Contains(capper))
+                        if (CappedList.Contains(capper)) continue;
+                        CappedList.Add(capper);
+                        if (CappedMessages.Count > 0)
                         {
-                            CappedList.Add(capper);
-                            if (CappedMessages.Count > 0)
-                            {
-                                message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper) + "\n");
-                            }
+                            message.Append(string.Format(CappedMessages[Random.Next(0, CappedMessages.Count)], capper) + "\n");
                         }
                     }
 
@@ -478,16 +473,21 @@ namespace Citadel
                                         PostMessageAsync(ItemChannel, builder.ToString()).GetAwaiter().GetResult();
                                         builder.Clear();
                                     }
+
                                     builder.Append(item);
                                 }
+
                                 if (builder.Length > 0)
                                 {
                                     PostMessageAsync(ItemChannel, builder.ToString()).GetAwaiter().GetResult();
                                 }
                             }
-                            catch { }
+                            catch(Exception e)
+                            {
+                                Console.WriteLine(e);
+                            }
                         }
-                        string[] achievements = Downloader.GetAchievements(Client, profiles);
+                        var achievements = Downloader.GetAchievements(Client, profiles);
                         if (AchievementWebhook != null && !Cache)
                         {
                             try
@@ -500,14 +500,19 @@ namespace Citadel
                                         AchievementWebhook.SendMessageAsync(builder.ToString());
                                         builder.Clear();
                                     }
+
                                     builder.Append(achievement);
                                 }
+
                                 if (builder.Length > 0)
                                 {
                                     AchievementWebhook.SendMessageAsync(builder.ToString());
                                 }
                             }
-                            catch { }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e);
+                            }
                         }
                         Cache = false;
                     }).Start();
@@ -577,13 +582,7 @@ namespace Citadel
             CurrentResetDate = CurrentResetDate.AddDays(7);
         }
 
-        public static string CookiesPath
-        {
-            get
-            {
-                return Path.Combine(COOKIE_DIRECTORY, $"{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json");
-            }
-        }
+        public static string CookiesPath => Path.Combine(COOKIE_DIRECTORY, $"{CurrentResetDate.ToShortDateString().Replace("/", "-")}.json");
 
         static Program()
         {

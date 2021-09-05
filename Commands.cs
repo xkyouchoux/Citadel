@@ -16,22 +16,22 @@ namespace Citadel
     {
         [Command("ip")]
         [RequireHost]
-        public async Task Ip()
+        public async Task IpAsync()
         {
             await Context.User.SendMessageAsync(await Program.Client.GetStringAsync("http://ipinfo.io/ip"));
         }
         
         [Command("shutdown")]
         [RequireHost]
-        public async Task UpdateAsync()
+        public async Task ShutdownAsync()
         {
-            Program.SHUTDOWN = true;
+            Program.Shutdown = true;
             await Task.CompletedTask;
         }
 
         [Command("forcecache")]
         [RequireHost]
-        public async Task ForceCache()
+        public async Task ForceCacheAsync()
         {
             Program.Force = true;
             Program.Cache = true;
@@ -43,7 +43,6 @@ namespace Citadel
         public async Task ForceAsync()
         {
             Program.Force = true;
-            new Thread(Program.TimerElapsed).Start();
             await Task.CompletedTask;
         }
 
